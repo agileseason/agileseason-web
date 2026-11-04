@@ -19,6 +19,7 @@
     "nuxt": "^4.6.3",
     "nuxt-storage": "^1.2.2",
     "vue": "^3.5.44",
+    "vue-draggable-plus": "^0.6.1",
     "vue-router": "^5.4.0"
   }
 }
