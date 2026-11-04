@@ -235,8 +235,31 @@ function addCard(column: Column) {
 }
 
 // ---------- добавление колонки ----------
+const isAddingColumn = ref(false)
+const newColumnTitle = ref('')
+
+function startAddColumn() {
+  isAddingColumn.value = true
+  newColumnTitle.value = ''
+}
+
+function cancelAddColumn() {
+  isAddingColumn.value = false
+  newColumnTitle.value = ''
+}
+
 function addColumn() {
-  columns.value.push({ id: nextId++, title: 'Новая колонка', cards: [] })
+  const title = newColumnTitle.value.trim()
+
+  if (!title) return
+
+  columns.value.push({
+    id: nextId++,
+    title,
+    cards: [],
+  })
+
+  cancelAddColumn()
 }
 
 // Сюда можно повесить запросы к GraphQL
@@ -255,7 +278,39 @@ function onCardsChange(columnId: number) {
           <h1 class="page-title">Задачи</h1>
         </div>
         <div class="col-auto ms-auto d-print-none">
-          <button type="button" class="btn btn-primary" @click="addColumn">
+          <div v-if="isAddingColumn" class="d-flex gap-2">
+            <input
+              v-model="newColumnTitle"
+              type="text"
+              class="form-control"
+              placeholder="Название колонки"
+              autofocus
+              @keyup.enter="addColumn"
+              @keyup.esc="cancelAddColumn"
+            />
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="!newColumnTitle.trim()"
+              @click="addColumn"
+            >
+              Добавить
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost-secondary btn-icon"
+              aria-label="Отмена"
+              @click="cancelAddColumn"
+            >
+              <IconX class="icon" />
+            </button>
+          </div>
+          <button
+            v-else
+            type="button"
+            class="btn btn-primary"
+            @click="startAddColumn"
+          >
             <IconPlus class="icon" />
             Добавить колонку
           </button>
@@ -297,7 +352,7 @@ function onCardsChange(columnId: number) {
               @add="onCardsChange(column.id)"
               @update="onCardsChange(column.id)"
             >
-              <div v-for="card in column.cards" :key="card.id" class="col-12">
+              <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
                 <div class="card card-sm kanban-card">
                   <!-- Цветная полоска сверху -->
                   <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
@@ -439,6 +494,10 @@ function onCardsChange(columnId: number) {
   min-height: 4rem;
 }
 
+.kanban-card-wrapper {
+  background-color: transparent;
+}
+
 .kanban-card {
   cursor: grab;
 }
@@ -460,9 +519,18 @@ function onCardsChange(columnId: number) {
 
 .kanban-ghost {
   opacity: 0.4;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.kanban-chosen {
+  border: none !important;
+  outline: none !important;
 }
 
 .kanban-chosen .card {
   box-shadow: var(--tblr-box-shadow-dropdown);
+  border-color: var(--tblr-border-color);
 }
 </style>
