@@ -1,7 +1,25 @@
+:root,
+[data-bs-theme] {
+  --tblr-primary: var(--tblr-indigo);
+  --tblr-primary-rgb: var(--tblr-indigo-rgb);
+  --tblr-primary-darken: #3b59d4;
+  --tblr-primary-fg: #ffffff;
+  --tblr-primary-lt: var(--tblr-indigo-lt);
+  --tblr-primary-lt-rgb: var(--tblr-indigo-lt-rgb);
+  --tblr-link-color: var(--tblr-indigo);
+  --tblr-link-color-rgb: var(--tblr-indigo-rgb);
+  --tblr-link-hover-color: #3b59d4;
+}
+
 .btn {
   --tblr-btn-box-shadow: none;
   --tblr-btn-active-shadow: none;
+  --tblr-btn-gradient: none;
+  --tblr-btn-border-color: transparent;
+  --tblr-btn-hover-border-color: transparent;
+  --tblr-btn-active-border-color: transparent;
   box-shadow: none;
+  background-image: none;
 }
 
 .btn:hover,
