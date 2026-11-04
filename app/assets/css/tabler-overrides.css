@@ -1,0 +1,11 @@
+.btn {
+  --tblr-btn-box-shadow: none;
+  --tblr-btn-active-shadow: none;
+  box-shadow: none;
+}
+
+.btn:hover,
+.btn:active,
+.btn.active {
+  box-shadow: none;
+}
