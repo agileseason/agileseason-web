@@ -262,6 +262,41 @@ function addColumn() {
   cancelAddColumn()
 }
 
+// ---------- редактирование заголовка колонки ----------
+const editingColumnId = ref<number | null>(null)
+const editingTitle = ref('')
+const titleInputs = new Map<number, HTMLInputElement>()
+
+function setTitleInput(columnId: number, el: unknown) {
+  if (el) titleInputs.set(columnId, el as HTMLInputElement)
+  else titleInputs.delete(columnId)
+}
+
+async function startEditTitle(column: Column) {
+  editingColumnId.value = column.id
+  editingTitle.value = column.title
+  await nextTick()
+  const input = titleInputs.get(column.id)
+  input?.focus()
+  input?.select()
+}
+
+function saveTitle(column: Column) {
+  // защита от повторного вызова (Enter + blur)
+  if (editingColumnId.value !== column.id) return
+
+  const title = editingTitle.value.trim()
+  if (title && title !== column.title) {
+    column.title = title
+    // сюда можно повесить мутацию GraphQL: updateColumnTitle(column.id, title)
+  }
+  editingColumnId.value = null
+}
+
+function cancelEditTitle() {
+  editingColumnId.value = null
+}
+
 // Сюда можно повесить запросы к GraphQL
 function onCardsChange(columnId: number) {
   // например: saveColumnOrder(columnId, column.cards.map(c => c.id))
@@ -336,7 +371,24 @@ function onCardsChange(columnId: number) {
             <span class="column-handle text-secondary me-2" title="Перетащить колонку">
               <IconGripVertical class="icon" />
             </span>
-            <h2 class="mb-0">{{ column.title }}</h2>
+            <input
+              v-if="editingColumnId === column.id"
+              :ref="(el) => setTitleInput(column.id, el)"
+              v-model="editingTitle"
+              type="text"
+              class="form-control form-control-sm column-title-input"
+              @keyup.enter="saveTitle(column)"
+              @keyup.esc="cancelEditTitle"
+              @blur="saveTitle(column)"
+            />
+            <h2
+              v-else
+              class="mb-0 column-title"
+              title="Нажмите, чтобы переименовать"
+              @click="startEditTitle(column)"
+            >
+              {{ column.title }}
+            </h2>
             <span class="badge bg-secondary-lt ms-2">{{ column.cards.length }}</span>
           </div>
 
@@ -515,6 +567,22 @@ function onCardsChange(columnId: number) {
 
 .checklist-item {
   cursor: pointer;
+}
+
+.column-title {
+  cursor: text;
+  padding: 0.125rem 0.375rem;
+  margin-left: -0.375rem;
+  border-radius: var(--tblr-border-radius);
+}
+.column-title:hover {
+  background-color: var(--tblr-bg-surface-secondary);
+}
+
+.column-title-input {
+  font-size: 1.25rem;
+  font-weight: 600;
+  max-width: 16rem;
 }
 
 .kanban-ghost {
