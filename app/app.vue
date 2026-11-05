@@ -238,9 +238,13 @@ function addCard(column: Column) {
 const isAddingColumn = ref(false)
 const newColumnTitle = ref('')
 
-function startAddColumn() {
+const newColumnInput = ref<HTMLInputElement | null>(null)
+
+async function startAddColumn() {
   isAddingColumn.value = true
   newColumnTitle.value = ''
+  await nextTick()
+  newColumnInput.value?.focus()
 }
 
 function cancelAddColumn() {
@@ -307,43 +311,235 @@ function onCardsChange(columnId: number) {
 <template>
   <!-- BEGIN PAGE HEADER -->
   <div class="page-header d-print-none">
-    <div class="container-xl">
+    <div class="container-fluid">
       <div class="row g-2 align-items-center">
         <div class="col">
           <h1 class="page-title">Задачи</h1>
         </div>
-        <div class="col-auto ms-auto d-print-none">
-          <div v-if="isAddingColumn" class="d-flex gap-2">
-            <input
-              v-model="newColumnTitle"
-              type="text"
-              class="form-control"
-              placeholder="Название колонки"
-              autofocus
-              @keyup.enter="addColumn"
-              @keyup.esc="cancelAddColumn"
-            />
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="!newColumnTitle.trim()"
-              @click="addColumn"
-            >
-              Добавить
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost-secondary btn-icon"
-              aria-label="Отмена"
-              @click="cancelAddColumn"
-            >
-              <IconX class="icon" />
-            </button>
+      </div>
+    </div>
+  </div>
+  <!-- END PAGE HEADER -->
+
+  <!-- BEGIN PAGE BODY -->
+  <div class="page-body">
+    <div class="container-fluid">
+      <!-- Перетаскивание колонок (за иконку-ручку) -->
+      <div class="kanban-board d-flex align-items-start gap-3 pb-3">
+        <VueDraggable
+          v-model="columns"
+          class="d-flex align-items-start gap-3"
+          handle=".column-handle"
+          :animation="200"
+          ghost-class="kanban-ghost"
+        >
+          <div v-for="column in columns" :key="column.id" class="kanban-column">
+            <div class="d-flex align-items-center mb-3">
+              <span class="column-handle text-secondary me-2" title="Перетащить колонку">
+                <IconGripVertical class="icon" />
+              </span>
+              <input
+                v-if="editingColumnId === column.id"
+                :ref="(el) => setTitleInput(column.id, el)"
+                v-model="editingTitle"
+                type="text"
+                class="form-control form-control-sm column-title-input"
+                @keyup.enter="saveTitle(column)"
+                @keyup.esc="cancelEditTitle"
+                @blur="saveTitle(column)"
+              />
+              <h2
+                v-else
+                class="mb-0 column-title"
+                title="Нажмите, чтобы переименовать"
+                @click="startEditTitle(column)"
+              >
+                {{ column.title }}
+              </h2>
+              <span class="badge bg-secondary-lt ms-2">{{ column.cards.length }}</span>
+            </div>
+
+            <div class="mb-4">
+              <!-- Перетаскивание карточек между колонками -->
+              <VueDraggable
+                v-model="column.cards"
+                class="row row-cards kanban-list"
+                group="cards"
+                :animation="150"
+                ghost-class="kanban-ghost"
+                chosen-class="kanban-chosen"
+                @add="onCardsChange(column.id)"
+                @update="onCardsChange(column.id)"
+              >
+                <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
+                  <div class="card card-sm kanban-card">
+                    <!-- Цветная полоска сверху -->
+                    <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
+
+                    <!-- Закладка -->
+                    <div v-if="card.starred" class="ribbon ribbon-top ribbon-bookmark bg-yellow">
+                      <IconStar class="icon" />
+                    </div>
+
+                    <div class="card-body">
+                      <h2 class="card-title">{{ card.title }}</h2>
+
+                      <div v-if="card.description" class="text-secondary">{{ card.description }}</div>
+
+                      <div class="mt-4">
+                        <div class="row">
+                          <!-- Исполнители -->
+                          <div class="col">
+                            <div v-if="card.assignees?.length" class="avatar-list avatar-list-stacked avatar-list-xs">
+                              <span
+                                v-for="user in card.assignees"
+                                :key="user.name"
+                                class="avatar avatar-xs"
+                                :title="user.name"
+                                :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
+                              >
+                                <template v-if="!user.src">{{ initials(user.name) }}</template>
+                              </span>
+                            </div>
+                          </div>
+
+                          <!-- Срок -->
+                          <div v-if="card.dueDate" class="col-auto">
+                            <a href="#" class="link-warning" @click.prevent>
+                              <IconCalendar class="icon icon-inline" />
+                              {{ formatDate(card.dueDate) }}
+                            </a>
+                          </div>
+
+                          <!-- Лайк -->
+                          <div class="col-auto text-secondary">
+                            <button
+                              class="switch-icon switch-icon-scale"
+                              :class="{ active: card.liked }"
+                              aria-label="В избранное"
+                              :aria-pressed="!!card.liked"
+                              @click="toggleLike(card)"
+                            >
+                              <span class="switch-icon-a text-muted">
+                                <IconHeart class="icon" />
+                              </span>
+                              <span class="switch-icon-b text-red">
+                                <IconHeartFilled class="icon icon-filled" />
+                              </span>
+                            </button>
+                            <template v-if="card.likes">{{ card.likes }}</template>
+                          </div>
+
+                          <!-- Прогресс чек-листа -->
+                          <div v-if="card.checklist?.length" class="col-auto">
+                            <a href="#" class="link-secondary" @click.prevent>
+                              <IconActivity class="icon icon-inline" />
+                              {{ doneCount(card) }}/{{ card.checklist.length }}
+                            </a>
+                          </div>
+
+                          <!-- Комментарии -->
+                          <div v-if="card.comments" class="col-auto">
+                            <a href="#" class="link-secondary" @click.prevent>
+                              <IconMessage class="icon icon-inline" />
+                              {{ card.comments }}
+                            </a>
+                          </div>
+
+                          <!-- Поделиться -->
+                          <div class="col-auto">
+                            <a href="#" class="link-secondary" aria-label="Поделиться" @click.prevent>
+                              <IconShare class="icon icon-inline" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Чек-лист -->
+                      <div v-if="card.checklist?.length" class="divide-y-2 mt-4">
+                        <div
+                          v-for="item in card.checklist"
+                          :key="item.id"
+                          class="checklist-item"
+                          @click="toggleChecklistItem(item)"
+                        >
+                          <IconCheck class="icon icon-inline" :class="item.done ? 'text-muted' : 'text-green'" />
+                          <span v-if="item.done" class="text-secondary text-decoration-line-through">
+                            {{ item.text }}
+                          </span>
+                          <template v-else>{{ item.text }}</template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </VueDraggable>
+
+              <!-- Добавление карточки -->
+              <div class="mt-3">
+                <div v-if="addingTo === column.id">
+                  <input
+                    v-model="newTitle"
+                    type="text"
+                    class="form-control mb-2"
+                    placeholder="Название задачи"
+                    autofocus
+                    @keyup.enter="addCard(column)"
+                    @keyup.esc="cancelAdd"
+                  />
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" @click="addCard(column)">Добавить</button>
+                    <button class="btn btn-ghost-secondary btn-sm btn-icon" aria-label="Отмена" @click="cancelAdd">
+                      <IconX class="icon" />
+                    </button>
+                  </div>
+                </div>
+                <button v-else class="btn btn-ghost-secondary w-100" @click="startAdd(column.id)">
+                  <IconPlus class="icon" />
+                  Добавить задачу
+                </button>
+              </div>
+            </div>
+          </div>
+        </VueDraggable>
+
+        <!-- Заглушка «новая колонка» справа от последней колонки -->
+        <div class="kanban-column">
+          <div v-if="isAddingColumn" class="card card-sm">
+            <div class="card-body">
+              <input
+                ref="newColumnInput"
+                v-model="newColumnTitle"
+                type="text"
+                class="form-control mb-2"
+                placeholder="Название колонки"
+                @keyup.enter="addColumn"
+                @keyup.esc="cancelAddColumn"
+              />
+              <div class="d-flex gap-2">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  :disabled="!newColumnTitle.trim()"
+                  @click="addColumn"
+                >
+                  Добавить колонку
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost-secondary btn-sm btn-icon"
+                  aria-label="Отмена"
+                  @click="cancelAddColumn"
+                >
+                  <IconX class="icon" />
+                </button>
+              </div>
+            </div>
           </div>
           <button
             v-else
             type="button"
-            class="btn btn-primary"
+            class="btn btn-outline-secondary w-100 add-column-btn"
             @click="startAddColumn"
           >
             <IconPlus class="icon" />
@@ -353,194 +549,24 @@ function onCardsChange(columnId: number) {
       </div>
     </div>
   </div>
-  <!-- END PAGE HEADER -->
-
-  <!-- BEGIN PAGE BODY -->
-  <div class="page-body">
-    <div class="container-xl">
-      <!-- Перетаскивание колонок (за иконку-ручку) -->
-      <VueDraggable
-        v-model="columns"
-        class="row"
-        handle=".column-handle"
-        :animation="200"
-        ghost-class="kanban-ghost"
-      >
-        <div v-for="column in columns" :key="column.id" class="col-12 col-md-6 col-lg">
-          <div class="d-flex align-items-center mb-3">
-            <span class="column-handle text-secondary me-2" title="Перетащить колонку">
-              <IconGripVertical class="icon" />
-            </span>
-            <input
-              v-if="editingColumnId === column.id"
-              :ref="(el) => setTitleInput(column.id, el)"
-              v-model="editingTitle"
-              type="text"
-              class="form-control form-control-sm column-title-input"
-              @keyup.enter="saveTitle(column)"
-              @keyup.esc="cancelEditTitle"
-              @blur="saveTitle(column)"
-            />
-            <h2
-              v-else
-              class="mb-0 column-title"
-              title="Нажмите, чтобы переименовать"
-              @click="startEditTitle(column)"
-            >
-              {{ column.title }}
-            </h2>
-            <span class="badge bg-secondary-lt ms-2">{{ column.cards.length }}</span>
-          </div>
-
-          <div class="mb-4">
-            <!-- Перетаскивание карточек между колонками -->
-            <VueDraggable
-              v-model="column.cards"
-              class="row row-cards kanban-list"
-              group="cards"
-              :animation="150"
-              ghost-class="kanban-ghost"
-              chosen-class="kanban-chosen"
-              @add="onCardsChange(column.id)"
-              @update="onCardsChange(column.id)"
-            >
-              <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
-                <div class="card card-sm kanban-card">
-                  <!-- Цветная полоска сверху -->
-                  <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
-
-                  <!-- Закладка -->
-                  <div v-if="card.starred" class="ribbon ribbon-top ribbon-bookmark bg-yellow">
-                    <IconStar class="icon" />
-                  </div>
-
-                  <div class="card-body">
-                    <h2 class="card-title">{{ card.title }}</h2>
-
-                    <div v-if="card.description" class="text-secondary">{{ card.description }}</div>
-
-                    <div class="mt-4">
-                      <div class="row">
-                        <!-- Исполнители -->
-                        <div class="col">
-                          <div v-if="card.assignees?.length" class="avatar-list avatar-list-stacked avatar-list-xs">
-                            <span
-                              v-for="user in card.assignees"
-                              :key="user.name"
-                              class="avatar avatar-xs"
-                              :title="user.name"
-                              :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
-                            >
-                              <template v-if="!user.src">{{ initials(user.name) }}</template>
-                            </span>
-                          </div>
-                        </div>
-
-                        <!-- Срок -->
-                        <div v-if="card.dueDate" class="col-auto">
-                          <a href="#" class="link-warning" @click.prevent>
-                            <IconCalendar class="icon icon-inline" />
-                            {{ formatDate(card.dueDate) }}
-                          </a>
-                        </div>
-
-                        <!-- Лайк -->
-                        <div class="col-auto text-secondary">
-                          <button
-                            class="switch-icon switch-icon-scale"
-                            :class="{ active: card.liked }"
-                            aria-label="В избранное"
-                            :aria-pressed="!!card.liked"
-                            @click="toggleLike(card)"
-                          >
-                            <span class="switch-icon-a text-muted">
-                              <IconHeart class="icon" />
-                            </span>
-                            <span class="switch-icon-b text-red">
-                              <IconHeartFilled class="icon icon-filled" />
-                            </span>
-                          </button>
-                          <template v-if="card.likes">{{ card.likes }}</template>
-                        </div>
-
-                        <!-- Прогресс чек-листа -->
-                        <div v-if="card.checklist?.length" class="col-auto">
-                          <a href="#" class="link-secondary" @click.prevent>
-                            <IconActivity class="icon icon-inline" />
-                            {{ doneCount(card) }}/{{ card.checklist.length }}
-                          </a>
-                        </div>
-
-                        <!-- Комментарии -->
-                        <div v-if="card.comments" class="col-auto">
-                          <a href="#" class="link-secondary" @click.prevent>
-                            <IconMessage class="icon icon-inline" />
-                            {{ card.comments }}
-                          </a>
-                        </div>
-
-                        <!-- Поделиться -->
-                        <div class="col-auto">
-                          <a href="#" class="link-secondary" aria-label="Поделиться" @click.prevent>
-                            <IconShare class="icon icon-inline" />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Чек-лист -->
-                    <div v-if="card.checklist?.length" class="divide-y-2 mt-4">
-                      <div
-                        v-for="item in card.checklist"
-                        :key="item.id"
-                        class="checklist-item"
-                        @click="toggleChecklistItem(item)"
-                      >
-                        <IconCheck class="icon icon-inline" :class="item.done ? 'text-muted' : 'text-green'" />
-                        <span v-if="item.done" class="text-secondary text-decoration-line-through">
-                          {{ item.text }}
-                        </span>
-                        <template v-else>{{ item.text }}</template>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </VueDraggable>
-
-            <!-- Добавление карточки -->
-            <div class="mt-3">
-              <div v-if="addingTo === column.id">
-                <input
-                  v-model="newTitle"
-                  type="text"
-                  class="form-control mb-2"
-                  placeholder="Название задачи"
-                  autofocus
-                  @keyup.enter="addCard(column)"
-                  @keyup.esc="cancelAdd"
-                />
-                <div class="d-flex gap-2">
-                  <button class="btn btn-primary btn-sm" @click="addCard(column)">Добавить</button>
-                  <button class="btn btn-ghost-secondary btn-sm btn-icon" aria-label="Отмена" @click="cancelAdd">
-                    <IconX class="icon" />
-                  </button>
-                </div>
-              </div>
-              <button v-else class="btn btn-ghost-secondary w-100" @click="startAdd(column.id)">
-                <IconPlus class="icon" />
-                Добавить задачу
-              </button>
-            </div>
-          </div>
-        </div>
-      </VueDraggable>
-    </div>
-  </div>
   <!-- END PAGE BODY -->
 </template>
 
 <style scoped>
+/* Горизонтальная доска, как в Trello */
+.kanban-board {
+  overflow-x: auto;
+}
+
+.kanban-column {
+  flex: 0 0 20rem;
+  width: 20rem;
+}
+
+.add-column-btn {
+  border-style: dashed;
+}
+
 /* Минимальная высота нужна, чтобы можно было бросить карточку в пустую колонку */
 .kanban-list {
   min-height: 4rem;
