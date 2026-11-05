@@ -10,7 +10,6 @@ import {
   IconActivity,
   IconCheck,
   IconStar,
-  IconGripVertical,
   IconX,
   IconChevronsLeft,
   IconChevronsRight,
@@ -343,7 +342,7 @@ function onCardsChange(columnId: number) {
         <VueDraggable
           v-model="columns"
           class="d-flex align-items-start gap-3"
-          handle=".column-handle"
+          handle=".column-header"
           :animation="200"
           ghost-class="kanban-ghost"
         >
@@ -355,10 +354,10 @@ function onCardsChange(columnId: number) {
           >
             <!-- Свёрнутая колонка: счётчик, вертикальное название и кнопка «развернуть» -->
             <div v-if="column.collapsed" class="card card-sm">
-              <div class="card-body d-flex flex-column align-items-center gap-2 px-0">
-                <span class="column-handle text-secondary" title="Перетащить колонку">
-                  <IconGripVertical class="icon" />
-                </span>
+              <div
+                class="card-body column-header d-flex flex-column align-items-center gap-2 px-0"
+                title="Перетащить колонку"
+              >
                 <span class="badge bg-secondary-lt">{{ column.cards.length }}</span>
                 <h2
                   class="mb-0 column-title-vertical"
@@ -380,10 +379,7 @@ function onCardsChange(columnId: number) {
             </div>
 
             <template v-else>
-              <div class="d-flex align-items-center mb-3">
-                <span class="column-handle text-secondary me-2" title="Перетащить колонку">
-                  <IconGripVertical class="icon" />
-                </span>
+              <div class="column-header d-flex align-items-center mb-3" title="Перетащить колонку">
                 <span class="badge bg-secondary-lt me-2">{{ column.cards.length }}</span>
                 <input
                   v-if="editingColumnId === column.id"
@@ -651,11 +647,10 @@ function onCardsChange(columnId: number) {
   cursor: grabbing;
 }
 
-.column-handle {
-  display: inline-flex;
+.column-header {
   cursor: grab;
 }
-.column-handle:active {
+.column-header:active {
   cursor: grabbing;
 }
 
