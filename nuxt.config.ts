@@ -5,6 +5,7 @@ export default defineNuxtConfig({
   ssr: false,
   css: [
     '@tabler/core/dist/css/tabler.min.css',
+    '@tabler/core/dist/css/tabler-themes.min.css',
     '~/assets/css/tabler-overrides.css',
   ],
 })
