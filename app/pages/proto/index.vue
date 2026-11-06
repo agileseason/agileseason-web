@@ -35,7 +35,6 @@ interface Card {
   assignees?: Assignee[]
   dueDate?: string // ISO-дата
   liked?: boolean
-  likes?: number
   comments?: number
   checklist?: ChecklistItem[]
 }
@@ -59,8 +58,6 @@ const columns = ref<Column[]>([
         title: 'Улучшить email-рассылки',
         description: 'Пересмотреть сегментацию и шаблоны писем.',
         assignees: [{ name: 'Анна Ильина' }],
-        dueDate: '2026-12-01',
-        likes: 7,
         comments: 2,
       },
       {
@@ -69,7 +66,6 @@ const columns = ref<Column[]>([
         status: 'yellow',
         dueDate: '2026-11-20',
         liked: true,
-        likes: 34,
         comments: 4,
       },
       {
@@ -78,7 +74,6 @@ const columns = ref<Column[]>([
         assignees: [{ name: 'Максим Козлов' }, { name: 'Дарья Петрова' }, { name: 'Олег Смирнов' }],
         dueDate: '2026-12-20',
         liked: true,
-        likes: 9,
       },
       {
         id: 4,
@@ -97,7 +92,6 @@ const columns = ref<Column[]>([
         id: 5,
         title: 'Внедрить новую аналитику',
         status: 'green',
-        dueDate: '2026-11-10',
         comments: 11,
         checklist: [
           { id: 1, text: 'Реализовать новый дизайн', done: true },
@@ -112,7 +106,6 @@ const columns = ref<Column[]>([
         isImportant: true,
         assignees: [{ name: 'Анна Ильина' }, { name: 'Дарья Петрова' }],
         dueDate: '2026-12-15',
-        likes: 11,
         comments: 6,
       },
       {
@@ -122,7 +115,6 @@ const columns = ref<Column[]>([
         status: 'red',
         assignees: [{ name: 'Анна Ильина' }, { name: 'Максим Козлов' }, { name: 'Олег Смирнов' }],
         dueDate: '2026-11-18',
-        likes: 14,
         comments: 18,
       },
       {
@@ -131,7 +123,6 @@ const columns = ref<Column[]>([
         status: 'blue',
         assignees: [{ name: 'Олег Смирнов' }, { name: 'Дарья Петрова' }, { name: 'Сергей Андреев' }],
         dueDate: '2026-11-30',
-        likes: 16,
         comments: 20,
         checklist: [
           { id: 1, text: 'Настроить CI/CD', done: true },
@@ -149,13 +140,11 @@ const columns = ref<Column[]>([
         id: 9,
         title: 'Оптимизировать производительность сайта',
         assignees: [{ name: 'Дарья Петрова' }],
-        dueDate: '2026-10-15',
-        likes: 1,
       },
       {
         id: 10,
         title: 'Разработать прототип мобильного приложения',
-        description: 'Описание чуть длиннее, чем обычно.',
+        description: 'Описание чуть длиннее, чем обычно. alskdjfl aksjdflkj ldakjflaskjdfl akjdflaskjdfl askjdflaksj flkadsjdflkjalkfdja00bb',
         assignees: [
           { name: 'Максим Козлов' },
           { name: 'Анна Ильина' },
@@ -164,7 +153,6 @@ const columns = ref<Column[]>([
         ],
         dueDate: '2026-10-10',
         liked: true,
-        likes: 7,
         checklist: [
           { id: 1, text: 'Найти старые документы по договору', done: true },
           { id: 2, text: 'Встреча с отделом продаж', done: false },
@@ -177,7 +165,6 @@ const columns = ref<Column[]>([
         status: 'red',
         assignees: [{ name: 'Сергей Андреев' }, { name: 'Анна Ильина' }],
         dueDate: '2026-09-25',
-        likes: 12,
         comments: 22,
       },
     ],
@@ -204,11 +191,6 @@ function initials(name: string) {
 
 function doneCount(card: Card) {
   return card.checklist?.filter(i => i.done).length ?? 0
-}
-
-function toggleLike(card: Card) {
-  card.liked = !card.liked
-  card.likes = Math.max(0, (card.likes ?? 0) + (card.liked ? 1 : -1))
 }
 
 function toggleChecklistItem(item: ChecklistItem) {
@@ -472,25 +454,6 @@ function onCardsChange(columnId: number) {
                                 <IconCalendar class="icon icon-inline" />
                                 {{ formatDate(card.dueDate) }}
                               </a>
-                            </div>
-
-                            <!-- Лайк -->
-                            <div class="col-auto text-secondary">
-                              <button
-                                class="switch-icon switch-icon-scale"
-                                :class="{ active: card.liked }"
-                                aria-label="В избранное"
-                                :aria-pressed="!!card.liked"
-                                @click="toggleLike(card)"
-                              >
-                                <span class="switch-icon-a text-muted">
-                                  <IconHeart class="icon" />
-                                </span>
-                                <span class="switch-icon-b text-red">
-                                  <IconHeartFilled class="icon icon-filled" />
-                                </span>
-                              </button>
-                              <template v-if="card.likes">{{ card.likes }}</template>
                             </div>
 
                             <!-- Прогресс чек-листа -->
