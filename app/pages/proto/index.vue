@@ -1,203 +1,78 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
+import type { SortableEvent } from 'vue-draggable-plus'
 import {
   IconPlus,
-  IconCalendar,
-  IconHeart,
-  IconHeartFilled,
   IconMessage,
-  IconShare,
   IconActivity,
-  IconCheck,
-  IconStar,
+  IconCircleCheck,
+  IconGitPullRequest,
   IconX,
   IconChevronsLeft,
   IconChevronsRight,
+  IconRefresh,
 } from '@tabler/icons-vue'
+import { fetchBoard, moveIssue } from '~/api/board'
+import { mapBoard } from '~/utils/board'
+import type { Card, Column } from '~/types/board'
 
-interface Assignee {
-  name: string
-  src?: string // URL аватарки, если нет — показываем инициалы
+const BOARD_ID = 42
+
+// ---------- загрузка данных ----------
+const boardName = ref('Задачи')
+const repositoryName = ref('')
+const columns = ref<Column[]>([])
+const isLoading = ref(true)
+const loadError = ref('')
+
+async function load() {
+  isLoading.value = true
+  loadError.value = ''
+  try {
+    const board = await fetchBoard(BOARD_ID)
+    boardName.value = board.name
+    repositoryName.value = board.repositories[0]?.fullName ?? ''
+    columns.value = mapBoard(board)
+  } catch (e) {
+    console.error(e)
+    loadError.value = 'Не удалось загрузить доску'
+  } finally {
+    isLoading.value = false
+  }
 }
 
-interface ChecklistItem {
-  id: number
-  text: string
-  done: boolean
-}
-
-interface Card {
-  id: number
-  title: string
-  description?: string
-  status?: 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'purple' // цветная полоска сверху
-  isImportant?: boolean // закладка-лента в углу
-  assignees?: Assignee[]
-  dueDate?: string // ISO-дата
-  liked?: boolean
-  comments?: number
-  checklist?: ChecklistItem[]
-}
-
-interface Column {
-  id: number
-  title: string
-  cards: Card[]
-  collapsed?: boolean // колонка свёрнута
-}
-
-let nextId = 1000
-
-const columns = ref<Column[]>([
-  {
-    id: 1,
-    title: 'Ожидает',
-    cards: [
-      {
-        id: 1,
-        title: 'Улучшить email-рассылки',
-        description: 'Пересмотреть сегментацию и шаблоны писем.',
-        assignees: [{ name: 'Анна Ильина' }],
-        comments: 2,
-      },
-      {
-        id: 2,
-        title: 'Провести интервью с пользователями',
-        status: 'yellow',
-        dueDate: '2026-11-20',
-        liked: true,
-        comments: 4,
-      },
-      {
-        id: 3,
-        title: 'Спланировать квартальную встречу команды',
-        assignees: [{ name: 'Максим Козлов' }, { name: 'Дарья Петрова' }, { name: 'Олег Смирнов' }],
-        dueDate: '2026-12-20',
-        liked: true,
-      },
-      {
-        id: 4,
-        title: 'Обновить документацию',
-        assignees: [{ name: 'Олег Смирнов' }],
-        dueDate: '2026-11-25',
-        comments: 5,
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: 'В работе',
-    cards: [
-      {
-        id: 5,
-        title: 'Внедрить новую аналитику',
-        status: 'green',
-        comments: 11,
-        checklist: [
-          { id: 1, text: 'Реализовать новый дизайн', done: true },
-          { id: 2, text: 'Юзабилити-тестирование', done: false },
-          { id: 3, text: 'Доработать навигацию', done: false },
-        ],
-      },
-      {
-        id: 6,
-        title: 'Запустить маркетинговую кампанию',
-        description: 'Форма для определённой категории пользователей, которые будут выполнять действия.',
-        isImportant: true,
-        assignees: [{ name: 'Анна Ильина' }, { name: 'Дарья Петрова' }],
-        dueDate: '2026-12-15',
-        comments: 6,
-      },
-      {
-        id: 7,
-        title: 'Реализовать систему авторизации',
-        description: 'Добавить OAuth и JWT.',
-        status: 'red',
-        assignees: [{ name: 'Анна Ильина' }, { name: 'Максим Козлов' }, { name: 'Олег Смирнов' }],
-        dueDate: '2026-11-18',
-        comments: 18,
-      },
-      {
-        id: 8,
-        title: 'Настроить пайплайн автотестов',
-        status: 'blue',
-        assignees: [{ name: 'Олег Смирнов' }, { name: 'Дарья Петрова' }, { name: 'Сергей Андреев' }],
-        dueDate: '2026-11-30',
-        comments: 20,
-        checklist: [
-          { id: 1, text: 'Настроить CI/CD', done: true },
-          { id: 2, text: 'Написать unit-тесты', done: false },
-          { id: 3, text: 'Подключить code coverage', done: false },
-        ],
-      },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Завершено',
-    cards: [
-      {
-        id: 9,
-        title: 'Оптимизировать производительность сайта',
-        assignees: [{ name: 'Дарья Петрова' }],
-      },
-      {
-        id: 10,
-        title: 'Разработать прототип мобильного приложения',
-        description: 'Описание чуть длиннее, чем обычно. alskdjfl aksjdflkj ldakjflaskjdfl akjdflaskjdfl askjdflaksj flkadsjdflkjalkfdja00bb',
-        assignees: [
-          { name: 'Максим Козлов' },
-          { name: 'Анна Ильина' },
-          { name: 'Олег Смирнов' },
-          { name: 'Дарья Петрова' },
-        ],
-        dueDate: '2026-10-10',
-        liked: true,
-        checklist: [
-          { id: 1, text: 'Найти старые документы по договору', done: true },
-          { id: 2, text: 'Встреча с отделом продаж', done: false },
-          { id: 3, text: 'Проработать все детали', done: false },
-        ],
-      },
-      {
-        id: 11,
-        title: 'Провести аудит безопасности',
-        status: 'red',
-        assignees: [{ name: 'Сергей Андреев' }, { name: 'Анна Ильина' }],
-        dueDate: '2026-09-25',
-        comments: 22,
-      },
-    ],
-  },
-])
+onMounted(load)
 
 // ---------- helpers ----------
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 function initials(name: string) {
   return name
-    .split(' ')
+    .split(/[\s\-_]+/)
+    .filter(Boolean)
     .map(part => part[0])
     .join('')
     .slice(0, 2)
     .toUpperCase()
 }
 
-function doneCount(card: Card) {
-  return card.checklist?.filter(i => i.done).length ?? 0
+function subtasksPercent(card: Card) {
+  if (!card.subtasks?.total) return 0
+  return Math.round((card.subtasks.done / card.subtasks.total) * 100)
 }
 
-function toggleChecklistItem(item: ChecklistItem) {
-  item.done = !item.done
+const PR_COLOR: Record<string, string> = {
+  open: 'text-green',
+  merged: 'text-purple',
+  closed: 'text-secondary',
+}
+
+const PR_TITLE: Record<string, string> = {
+  open: 'открыт',
+  merged: 'влит',
+  closed: 'закрыт',
 }
 
 // ---------- добавление карточки ----------
+let nextId = -1 // локальные (ещё не сохранённые) карточки имеют отрицательные id
 const addingTo = ref<number | null>(null)
 const newTitle = ref('')
 
@@ -214,14 +89,22 @@ function cancelAdd() {
 function addCard(column: Column) {
   const title = newTitle.value.trim()
   if (!title) return
-  column.cards.push({ id: nextId++, title })
+  // TODO: заменить на мутацию создания issue, id взять из ответа
+  column.cards.push({
+    id: nextId--,
+    title,
+    labels: [],
+    assignees: [],
+    comments: 0,
+    pullRequests: [],
+    isClosed: false,
+  })
   cancelAdd()
 }
 
 // ---------- добавление колонки ----------
 const isAddingColumn = ref(false)
 const newColumnTitle = ref('')
-
 const newColumnInput = ref<HTMLInputElement | null>(null)
 
 async function startAddColumn() {
@@ -238,27 +121,20 @@ function cancelAddColumn() {
 
 function addColumn() {
   const title = newColumnTitle.value.trim()
-
   if (!title) return
 
-  columns.value.push({
-    id: nextId++,
-    title,
-    cards: [],
-  })
-
+  // TODO: заменить на мутацию создания колонки
+  columns.value.push({ id: nextId--, title, cards: [] })
   cancelAddColumn()
 }
 
 // ---------- сворачивание колонки ----------
 function toggleCollapse(column: Column) {
   if (!column.collapsed) {
-    // в свёрнутую колонку добавлять задачи нельзя
     if (addingTo.value === column.id) cancelAdd()
     if (editingColumnId.value === column.id) editingColumnId.value = null
   }
   column.collapsed = !column.collapsed
-  // сюда можно повесить мутацию GraphQL: setColumnCollapsed(column.id, column.collapsed)
 }
 
 // ---------- редактирование заголовка колонки ----------
@@ -287,7 +163,7 @@ function saveTitle(column: Column) {
   const title = editingTitle.value.trim()
   if (title && title !== column.title) {
     column.title = title
-    // сюда можно повесить мутацию GraphQL: updateColumnTitle(column.id, title)
+    // TODO: мутация updateColumnTitle(column.id, title)
   }
   editingColumnId.value = null
 }
@@ -296,10 +172,23 @@ function cancelEditTitle() {
   editingColumnId.value = null
 }
 
-// Сюда можно повесить запросы к GraphQL
-function onCardsChange(columnId: number) {
-  // например: saveColumnOrder(columnId, column.cards.map(c => c.id))
-  console.log('cards changed in column', columnId)
+// ---------- перемещение карточек ----------
+async function onCardsChange(column: Column, evt: SortableEvent) {
+  await nextTick() // дожидаемся, пока v-model обновит column.cards
+  const card = column.cards[evt.newIndex ?? -1]
+  if (!card || card.id < 0) return // локальные карточки ещё не созданы на сервере
+
+  try {
+    await moveIssue({
+      issueId: card.id,
+      columnId: column.id,
+      position: (evt.newIndex ?? 0) + 1,
+    })
+  } catch (e) {
+    console.error(e)
+    // TODO: откатить перемещение или перезагрузить доску
+    await load()
+  }
 }
 </script>
 
@@ -309,7 +198,20 @@ function onCardsChange(columnId: number) {
     <div class="container-fluid">
       <div class="row g-2 align-items-center">
         <div class="col">
-          <h1 class="page-title">Задачи</h1>
+          <div v-if="repositoryName" class="page-pretitle">{{ repositoryName }}</div>
+          <h1 class="page-title">{{ boardName }}</h1>
+        </div>
+        <div class="col-auto">
+          <button
+            type="button"
+            class="btn btn-ghost-secondary btn-icon"
+            aria-label="Обновить"
+            title="Обновить"
+            :disabled="isLoading"
+            @click="load"
+          >
+            <IconRefresh class="icon" />
+          </button>
         </div>
       </div>
     </div>
@@ -319,8 +221,21 @@ function onCardsChange(columnId: number) {
   <!-- BEGIN PAGE BODY -->
   <div class="page-body">
     <div class="container-fluid">
-      <!-- Перетаскивание колонок (за иконку-ручку) -->
-      <div class="kanban-board d-flex align-items-start gap-3 pb-3">
+      <!-- Загрузка -->
+      <div v-if="isLoading && !columns.length" class="text-center text-secondary py-6">
+        <div class="spinner-border mb-3" role="status"></div>
+        <div>Загружаем доску…</div>
+      </div>
+
+      <!-- Ошибка -->
+      <div v-else-if="loadError" class="alert alert-danger" role="alert">
+        {{ loadError }}
+        <button type="button" class="btn btn-sm btn-danger ms-3" @click="load">Повторить</button>
+      </div>
+
+      <!-- Доска -->
+      <div v-else class="kanban-board d-flex align-items-start gap-3 pb-3">
+        <!-- Перетаскивание колонок (за заголовок) -->
         <VueDraggable
           v-model="columns"
           class="d-flex align-items-start gap-3"
@@ -334,18 +249,14 @@ function onCardsChange(columnId: number) {
             class="kanban-column"
             :class="{ 'is-collapsed': column.collapsed }"
           >
-            <!-- Свёрнутая колонка: счётчик, вертикальное название и кнопка «развернуть» -->
+            <!-- Свёрнутая колонка -->
             <div v-if="column.collapsed" class="card card-sm">
               <div
                 class="card-body column-header d-flex flex-column align-items-center gap-2 px-0"
                 title="Перетащить колонку"
               >
                 <span class="badge bg-secondary-lt">{{ column.cards.length }}</span>
-                <h2
-                  class="mb-0 column-title-vertical"
-                  title="Развернуть колонку"
-                  @click="toggleCollapse(column)"
-                >
+                <h2 class="mb-0 column-title-vertical" title="Развернуть колонку" @click="toggleCollapse(column)">
                   {{ column.title }}
                 </h2>
                 <button
@@ -382,6 +293,12 @@ function onCardsChange(columnId: number) {
                   {{ column.title }}
                 </h2>
 
+                <IconCircleCheck
+                  v-if="column.isAutoClose"
+                  class="icon ms-2 text-green flex-shrink-0"
+                  title="Задачи в этой колонке закрываются автоматически"
+                />
+
                 <div class="ms-auto d-flex flex-shrink-0">
                   <button
                     type="button"
@@ -405,128 +322,153 @@ function onCardsChange(columnId: number) {
               </div>
 
               <div class="mb-4">
-                <!-- Перетаскивание карточек между колонками -->
-                <VueDraggable
-                  v-model="column.cards"
-                  class="row row-cards kanban-list"
-                  group="cards"
-                  :animation="150"
-                  ghost-class="kanban-ghost"
-                  chosen-class="kanban-chosen"
-                  @add="onCardsChange(column.id)"
-                  @update="onCardsChange(column.id)"
-                >
-                  <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
-                    <div class="card card-sm kanban-card">
-                      <!-- Цветная полоска сверху -->
-                      <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
+                <!-- Добавление карточки -->
+                <div v-if="addingTo === column.id" class="mb-3">
+                  <input
+                    v-model="newTitle"
+                    type="text"
+                    class="form-control mb-2"
+                    placeholder="Название задачи"
+                    autofocus
+                    @keyup.enter="addCard(column)"
+                    @keyup.esc="cancelAdd"
+                  />
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" @click="addCard(column)">Добавить</button>
+                    <button class="btn btn-ghost-secondary btn-sm btn-icon" aria-label="Отмена" @click="cancelAdd">
+                      <IconX class="icon" />
+                    </button>
+                  </div>
+                </div>
 
-                      <!-- Закладка -->
-                      <div v-if="card.isImportant" class="ribbon ribbon-top ribbon-bookmark bg-indigo">
-                        <IconStar class="icon" />
-                      </div>
+                <!-- Список карточек с вертикальной прокруткой (в Done их много) -->
+                <div class="kanban-scroll">
+                  <VueDraggable
+                    v-model="column.cards"
+                    class="row row-cards kanban-list"
+                    group="cards"
+                    :animation="150"
+                    ghost-class="kanban-ghost"
+                    chosen-class="kanban-chosen"
+                    @add="onCardsChange(column, $event)"
+                    @update="onCardsChange(column, $event)"
+                  >
+                    <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
+                      <div class="card card-sm kanban-card">
+                        <!-- Цветная полоска сверху (по типу задачи) -->
+                        <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
 
-                      <div class="card-body">
-                        <h2 class="card-title">{{ card.title }}</h2>
+                        <div class="card-body">
+                          <div class="d-flex align-items-start gap-2">
+                            <h2 class="card-title mb-0 flex-fill">
+                              <a
+                                v-if="card.url"
+                                :href="card.url"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-secondary text-decoration-none me-1"
+                                @click.stop
+                              >#{{ card.number }}</a>
+                              {{ card.title }}
+                            </h2>
+                            <IconCircleCheck
+                              v-if="card.isClosed"
+                              class="icon icon-inline text-green flex-shrink-0"
+                              title="Закрыта"
+                            />
+                          </div>
 
-                        <div v-if="card.description" class="text-secondary">{{ card.description }}</div>
+                          <div v-if="card.description" class="text-secondary mt-2 card-description">
+                            {{ card.description }}
+                          </div>
 
-                        <div class="mt-4">
-                          <div class="row">
-                            <!-- Исполнители -->
-                            <div class="col">
-                              <div v-if="card.assignees?.length" class="avatar-list avatar-list-stacked avatar-list-xs">
-                                <span
-                                  v-for="user in card.assignees"
-                                  :key="user.name"
-                                  class="avatar avatar-xs"
-                                  :title="user.name"
-                                  :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
+                          <!-- Метки -->
+                          <div v-if="card.labels.length" class="d-flex flex-wrap gap-1 mt-3">
+                            <span
+                              v-for="label in card.labels"
+                              :key="label.name"
+                              class="badge"
+                              :style="{ backgroundColor: label.color, color: label.textColor }"
+                            >
+                              {{ label.name }}
+                            </span>
+                          </div>
+
+                          <!-- Прогресс подзадач -->
+                          <div v-if="card.subtasks" class="mt-3">
+                            <div class="progress progress-sm">
+                              <div
+                                class="progress-bar bg-green"
+                                role="progressbar"
+                                :style="{ width: `${subtasksPercent(card)}%` }"
+                              ></div>
+                            </div>
+                          </div>
+
+                          <div class="mt-3">
+                            <div class="row align-items-center g-2">
+                              <!-- Исполнители -->
+                              <div class="col">
+                                <div v-if="card.assignees.length" class="avatar-list avatar-list-stacked avatar-list-xs">
+                                  <span
+                                    v-for="user in card.assignees"
+                                    :key="user.name"
+                                    class="avatar avatar-xs"
+                                    :title="user.name"
+                                    :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
+                                  >
+                                    <template v-if="!user.src">{{ initials(user.name) }}</template>
+                                  </span>
+                                </div>
+                                <span v-else-if="card.createdAgo" class="text-secondary small">
+                                  {{ card.createdAgo }}
+                                </span>
+                              </div>
+
+                              <!-- Подзадачи -->
+                              <div v-if="card.subtasks" class="col-auto">
+                                <span class="text-secondary" title="Подзадачи">
+                                  <IconActivity class="icon icon-inline" />
+                                  {{ card.subtasks.done }}/{{ card.subtasks.total }}
+                                </span>
+                              </div>
+
+                              <!-- Pull request-ы -->
+                              <div v-for="pr in card.pullRequests" :key="pr.id" class="col-auto">
+                                <a
+                                  :href="pr.url"
+                                  target="_blank"
+                                  rel="noopener"
+                                  class="text-decoration-none"
+                                  :class="PR_COLOR[pr.state]"
+                                  :title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
+                                  @click.stop
                                 >
-                                  <template v-if="!user.src">{{ initials(user.name) }}</template>
+                                  <IconGitPullRequest class="icon icon-inline" />
+                                  {{ pr.number }}
+                                </a>
+                              </div>
+
+                              <!-- Комментарии -->
+                              <div v-if="card.comments" class="col-auto">
+                                <span class="text-secondary" title="Комментарии">
+                                  <IconMessage class="icon icon-inline" />
+                                  {{ card.comments }}
                                 </span>
                               </div>
                             </div>
-
-                            <!-- Срок -->
-                            <div v-if="card.dueDate" class="col-auto">
-                              <a href="#" class="link-warning" @click.prevent>
-                                <IconCalendar class="icon icon-inline" />
-                                {{ formatDate(card.dueDate) }}
-                              </a>
-                            </div>
-
-                            <!-- Прогресс чек-листа -->
-                            <div v-if="card.checklist?.length" class="col-auto">
-                              <a href="#" class="link-secondary" @click.prevent>
-                                <IconActivity class="icon icon-inline" />
-                                {{ doneCount(card) }}/{{ card.checklist.length }}
-                              </a>
-                            </div>
-
-                            <!-- Комментарии -->
-                            <div v-if="card.comments" class="col-auto">
-                              <a href="#" class="link-secondary" @click.prevent>
-                                <IconMessage class="icon icon-inline" />
-                                {{ card.comments }}
-                              </a>
-                            </div>
-
-                            <!-- Поделиться -->
-                            <div class="col-auto">
-                              <a href="#" class="link-secondary" aria-label="Поделиться" @click.prevent>
-                                <IconShare class="icon icon-inline" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Чек-лист -->
-                        <div v-if="card.checklist?.length" class="divide-y-2 mt-4">
-                          <div
-                            v-for="item in card.checklist"
-                            :key="item.id"
-                            class="checklist-item"
-                            @click="toggleChecklistItem(item)"
-                          >
-                            <IconCheck class="icon icon-inline" :class="item.done ? 'text-muted' : 'text-green'" />
-                            <span v-if="item.done" class="text-secondary text-decoration-line-through">
-                              {{ item.text }}
-                            </span>
-                            <template v-else>{{ item.text }}</template>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </VueDraggable>
-
-                <!-- Добавление карточки -->
-                <div v-if="addingTo === column.id" class="mt-3">
-                  <div>
-                    <input
-                      v-model="newTitle"
-                      type="text"
-                      class="form-control mb-2"
-                      placeholder="Название задачи"
-                      autofocus
-                      @keyup.enter="addCard(column)"
-                      @keyup.esc="cancelAdd"
-                    />
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-primary btn-sm" @click="addCard(column)">Добавить</button>
-                      <button class="btn btn-ghost-secondary btn-sm btn-icon" aria-label="Отмена" @click="cancelAdd">
-                        <IconX class="icon" />
-                      </button>
-                    </div>
-                  </div>
+                  </VueDraggable>
                 </div>
               </div>
             </template>
           </div>
         </VueDraggable>
 
-        <!-- Заглушка «новая колонка» справа от последней колонки -->
+        <!-- Заглушка «новая колонка» -->
         <div class="kanban-column">
           <div v-if="isAddingColumn" class="card card-sm">
             <div class="card-body">
@@ -576,7 +518,6 @@ function onCardsChange(columnId: number) {
 </template>
 
 <style scoped>
-/* Горизонтальная доска, как в Trello */
 .kanban-board {
   overflow-x: auto;
 }
@@ -592,6 +533,14 @@ function onCardsChange(columnId: number) {
 
 .add-column-btn {
   border-style: dashed;
+}
+
+/* Колонка прокручивается по вертикали, если карточек много */
+.kanban-scroll {
+  max-height: calc(100vh - 16rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.25rem;
 }
 
 /* Минимальная высота нужна, чтобы можно было бросить карточку в пустую колонку */
@@ -610,15 +559,15 @@ function onCardsChange(columnId: number) {
   cursor: grabbing;
 }
 
+.card-description {
+  overflow-wrap: anywhere;
+}
+
 .column-header {
   cursor: grab;
 }
 .column-header:active {
   cursor: grabbing;
-}
-
-.checklist-item {
-  cursor: pointer;
 }
 
 .column-title {

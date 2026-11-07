@@ -1,0 +1,261 @@
+{
+  "data": {
+    "board": {
+      "id": 42,
+      "name": "myBudget III",
+      "isOwner": true,
+      "cacheKey": "boards/42-20261106124437506458",
+      "columns": [
+        {
+          "id": 200,
+          "name": "Backlog",
+          "position": 0,
+          "isAutoAssign": false,
+          "isAutoClose": false,
+          "issues": [
+            {
+              "id": 9303, "number": 362,
+              "title": "Функционал блога, страницы с новостями и обновлениями",
+              "body": "Было бы здорово писать в формате markdown страницы. Первый кандидат на добавление новости, о том, что выходит версия 3, и о том, что версия 2 доступна по старому урлу 2.mybudget.ws",
+              "labels": [], "assignees": [], "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 2,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/362",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-21T17:14:05Z", "createdAgo": "16 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 200, "commentsCount": 0, "ageDays": 16, "pullRequests": []
+            },
+            {
+              "id": 8704, "number": 155,
+              "title": "Race condition: loadMore and route watcher can corrupt the transactions list.",
+              "body": "_⚠️ Potential issue_ | _🟠 Major_ | _🏗️ Heavy lift_\n\n**Race condition: `loadMore` and route watcher can corrupt the transactions list.**\n\nIf a user clicks \"load more\" then immediately changes a filter, two loads run concurrently.",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [], "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 3,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/155",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-05-15T09:07:15Z", "createdAgo": "6 months ago",
+              "author": { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" },
+              "columnId": 200, "commentsCount": 0, "ageDays": 175, "pullRequests": []
+            }
+          ]
+        },
+        {
+          "id": 204,
+          "name": "Todo",
+          "position": 1,
+          "isAutoAssign": false,
+          "isAutoClose": false,
+          "issues": [
+            {
+              "id": 9330, "number": 390,
+              "title": "Сбросить все фильтры - кнопка (или ссылка), чтобы сбросить все фильтры одним нажатием",
+              "body": "Появляется, если фильтр применен\n![img](https://agileseason3.s3.eu-central-1.amazonaws.com/59e8b039d556b6e6033656ef7dc4c201.png)\n",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 1,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/390",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-11-01T12:15:54Z", "createdAgo": "5 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 204, "commentsCount": 0, "ageDays": 5, "pullRequests": []
+            },
+            {
+              "id": 9342, "number": 397,
+              "title": "Проблема - дублируются операции при двойных тегах",
+              "body": "![img](https://agileseason3.s3.eu-central-1.amazonaws.com/734a70f5f135a21e894bc85868f16ee2.png)\n",
+              "labels": [ { "name": "bug", "color": "b60205" }, { "name": "back-end", "color": "304ffe" } ],
+              "assignees": [ { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 2,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/397",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-11-05T18:03:19Z", "createdAgo": "about 24 hours ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 204, "commentsCount": 0, "ageDays": 1, "pullRequests": []
+            },
+            {
+              "id": 8787, "number": 178,
+              "title": "Добавить на графике балансов пунктиром линию - Всего",
+              "body": "",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "front-end", "color": "0ec93c" }, { "name": "back-end", "color": "304ffe" } ],
+              "assignees": [ { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ],
+              "color": null, "isBody": false, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 3,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/178",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-05-30T10:13:22Z", "createdAgo": "5 months ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 204, "commentsCount": 0, "ageDays": 160, "pullRequests": []
+            }
+          ]
+        },
+        {
+          "id": 201,
+          "name": "In Progress",
+          "position": 2,
+          "isAutoAssign": true,
+          "isAutoClose": false,
+          "issues": [
+            {
+              "id": 9327, "number": 389,
+              "title": "Перенести на дажборде \"Всего\" со счетов и активов из таблиц в верхний правый угол, по аналогии с доходами и расходами",
+              "body": "А строчку \"Всего\" из таблиц можно убрать\n\n![img](https://agileseason3.s3.eu-central-1.amazonaws.com/183f8a2be0dfe67e185d5047bea87b11.png)\n",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "design", "color": "9575CE" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 1,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/389",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-29T17:11:59Z", "createdAgo": "8 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 201, "commentsCount": 0, "ageDays": 8,
+              "pullRequests": [
+                { "id": 2296, "number": 395, "isClosed": false, "isMerged": false, "url": "https://github.com/mybudget-ws/mybudget3/pull/395", "repositoryName": "mybudget3", "assignees": [ { "login": "blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ] }
+              ]
+            },
+            {
+              "id": 9332, "number": 392,
+              "title": "Перевод на ru для дат (ось X) на графиках (лучше на всех по возможности)",
+              "body": "",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": false, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 2,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/392",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-11-03T09:48:14Z", "createdAgo": "3 days ago",
+              "author": { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" },
+              "columnId": 201, "commentsCount": 0, "ageDays": 3,
+              "pullRequests": [
+                { "id": 2297, "number": 396, "isClosed": false, "isMerged": false, "url": "https://github.com/mybudget-ws/mybudget3/pull/396", "repositoryName": "mybudget3", "assignees": [ { "login": "blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ] }
+              ]
+            },
+            {
+              "id": 9318, "number": 374,
+              "title": "Картинку на первом слайде главной сделать более похожей на реальный дажборд",
+              "body": "![img](https://agileseason3.s3.eu-central-1.amazonaws.com/e45dca3aa506b014c5093ef3e85d1028.png)\n",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "design", "color": "9575CE" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 3,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/374",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-27T09:14:19Z", "createdAgo": "10 days ago",
+              "author": { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" },
+              "columnId": 201, "commentsCount": 0, "ageDays": 10,
+              "pullRequests": [
+                { "id": 2301, "number": 398, "isClosed": false, "isMerged": false, "url": "https://github.com/mybudget-ws/mybudget3/pull/398", "repositoryName": "mybudget3", "assignees": [ { "login": "blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 202,
+          "name": "Testing",
+          "position": 3,
+          "isAutoAssign": false,
+          "isAutoClose": false,
+          "issues": [
+            {
+              "id": 9326, "number": 388,
+              "title": "При редактировании операции показывается не тот счет выбранным, который на самом деле. В мобильной версии",
+              "body": "![img](https://agileseason3.s3.eu-central-1.amazonaws.com/b759a901877c00ec4f098fac10033963.png)\n",
+              "labels": [ { "name": "bug", "color": "b60205" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 1,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/388",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-29T16:07:47Z", "createdAgo": "8 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 202, "commentsCount": 0, "ageDays": 8,
+              "pullRequests": [
+                { "id": 2289, "number": 391, "isClosed": true, "isMerged": true, "url": "https://github.com/mybudget-ws/mybudget3/pull/391", "repositoryName": "mybudget3", "assignees": [ { "login": "blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ] }
+              ]
+            },
+            {
+              "id": 9325, "number": 387,
+              "title": "Убрать фокус на поле в мобильной версии создания операции при \"копировании\"",
+              "body": "Дополнительно проверить, что и при редактировании там не было фокуса\n\n![img](https://agileseason3.s3.eu-central-1.amazonaws.com/a748964bc6190ed81fad1d1525ca9e86.png)\n",
+              "labels": [ { "name": "bug", "color": "b60205" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": false, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 2,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/387",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-29T16:06:15Z", "createdAgo": "8 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 202, "commentsCount": 0, "ageDays": 8, "pullRequests": []
+            }
+          ]
+        },
+        {
+          "id": 203,
+          "name": "Done",
+          "position": 4,
+          "isAutoAssign": false,
+          "isAutoClose": true,
+          "issues": [
+            {
+              "id": 9281, "number": 346,
+              "title": "Аудит кода project",
+              "body": "## TODO list\n- [x] model 1\n- [x] model 2\n\n```\nВ компоненте project_part.vue есть редактирование элементов проекта.\n```",
+              "labels": [],
+              "assignees": [ { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ],
+              "color": null, "isBody": true, "isClosed": true, "isArchived": false,
+              "totalSubtasks": 2, "doneSubtasks": 2, "position": 8,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/346",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-16T19:17:15Z", "createdAgo": "21 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 203, "commentsCount": 0, "ageDays": 20,
+              "pullRequests": [
+                { "id": 2228, "number": 347, "isClosed": true, "isMerged": false, "url": "https://github.com/mybudget-ws/mybudget3/pull/347", "repositoryName": "mybudget3", "assignees": [] },
+                { "id": 2260, "number": 366, "isClosed": true, "isMerged": true, "url": "https://github.com/mybudget-ws/mybudget3/pull/366", "repositoryName": "mybudget3", "assignees": [] }
+              ]
+            },
+            {
+              "id": 9283, "number": 351,
+              "title": "Улучшение tooltip-а на графиках",
+              "body": "![img](https://agileseason3.s3.eu-central-1.amazonaws.com/eeed104b76f5eb5dffaad6c2569d3e1f.png)\n",
+              "labels": [ { "name": "enhancement", "color": "29b6f6" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "toucan-v8", "url": "https://github.com/toucan-v8", "avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4" } ],
+              "color": null, "isBody": true, "isClosed": true, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 1,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/351",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-18T18:46:20Z", "createdAgo": "19 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 203, "commentsCount": 0, "ageDays": 18,
+              "pullRequests": [
+                { "id": 2272, "number": 383, "isClosed": true, "isMerged": true, "url": "https://github.com/mybudget-ws/mybudget3/pull/383", "repositoryName": "mybudget3", "assignees": [] }
+              ]
+            },
+            {
+              "id": 9315, "number": 369,
+              "title": "Пофиксить меню для мобилы, выскакивает при после первого открытия постоянно",
+              "body": "",
+              "labels": [ { "name": "bug", "color": "b60205" }, { "name": "front-end", "color": "0ec93c" } ],
+              "assignees": [ { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" } ],
+              "color": null, "isBody": false, "isClosed": true, "isArchived": false,
+              "totalSubtasks": 0, "doneSubtasks": 0, "position": 9,
+              "url": "https://github.com/mybudget-ws/mybudget3/issues/369",
+              "repositoryName": "mybudget3", "repositoryFullName": "mybudget-ws/mybudget3",
+              "createdAt": "2026-10-26T16:56:04Z", "createdAgo": "11 days ago",
+              "author": { "login": "blackchestnut", "url": "https://github.com/blackchestnut", "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4" },
+              "columnId": 203, "commentsCount": 3, "ageDays": 11,
+              "pullRequests": [
+                { "id": 2268, "number": 370, "isClosed": true, "isMerged": true, "url": "https://github.com/mybudget-ws/mybudget3/pull/370", "repositoryName": "mybudget3", "assignees": [] }
+              ]
+            }
+          ]
+        }
+      ],
+      "repositories": [
+        { "id": 998510949, "name": "mybudget3", "fullName": "mybudget-ws/mybudget3" }
+      ]
+    }
+  }
+}
