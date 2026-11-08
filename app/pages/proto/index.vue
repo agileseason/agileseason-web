@@ -5,6 +5,7 @@ import {
   IconPlus,
   IconMessage,
   IconActivity,
+  IconAlignLeft,
   IconCircleCheck,
   IconGitPullRequest,
   IconX,
@@ -430,19 +431,19 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                           <div class="mt-3">
                             <div class="row align-items-center g-2">
-                              <!-- Исполнители -->
-                              <div class="col">
-                                <div v-if="card.assignees.length" class="avatar-list avatar-list-stacked avatar-list-xs">
-                                  <span
-                                    v-for="user in card.assignees"
-                                    :key="user.name"
-                                    class="avatar avatar-xs"
-                                    :title="user.name"
-                                    :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
-                                  >
-                                    <template v-if="!user.src">{{ initials(user.name) }}</template>
-                                  </span>
-                                </div>
+                              <!-- Есть описание -->
+                              <div v-if="card.description" class="col-auto">
+                                <span class="text-secondary" title="Есть описание">
+                                  <IconAlignLeft class="icon icon-inline" />
+                                </span>
+                              </div>
+
+                              <!-- Комментарии -->
+                              <div v-if="card.comments" class="col-auto">
+                                <span class="text-secondary" title="Комментарии">
+                                  <IconMessage class="icon icon-inline" />
+                                  {{ card.comments }}
+                                </span>
                               </div>
 
                               <!-- Подзадачи -->
@@ -453,12 +454,19 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                                 </span>
                               </div>
 
-                              <!-- Комментарии -->
-                              <div v-if="card.comments" class="col-auto">
-                                <span class="text-secondary" title="Комментарии">
-                                  <IconMessage class="icon icon-inline" />
-                                  {{ card.comments }}
-                                </span>
+                              <!-- Исполнители (всегда справа) -->
+                              <div v-if="card.assignees.length" class="col-auto ms-auto">
+                                <div class="avatar-list avatar-list-stacked avatar-list-xs">
+                                  <span
+                                    v-for="user in card.assignees"
+                                    :key="user.name"
+                                    class="avatar avatar-xs"
+                                    :title="user.name"
+                                    :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
+                                  >
+                                    <template v-if="!user.src">{{ initials(user.name) }}</template>
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
