@@ -2,7 +2,9 @@ import type {
   ApiBoard,
   ApiIssue,
   ApiLabel,
+  ApiUser,
   Card,
+  CardAssignee,
   CardLabel,
   CardStatus,
   Column,
@@ -49,15 +51,20 @@ function makeDescription(body: string, max = 140): string | undefined {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text
 }
 
+function mapUser(user: ApiUser): CardAssignee {
+  return { name: user.login, src: user.avatarUrl }
+}
+
 export function mapIssue(issue: ApiIssue): Card {
   return {
     id: issue.id,
     number: issue.number,
+    repositoryName: issue.repositoryName,
     title: issue.title,
     description: makeDescription(issue.body),
     status: pickStatus(issue.labels),
     labels: issue.labels.map(mapLabel),
-    assignees: issue.assignees.map(a => ({ name: a.login, src: a.avatarUrl })),
+    assignees: issue.assignees.map(mapUser),
     comments: issue.commentsCount,
     subtasks: issue.totalSubtasks > 0
       ? { done: issue.doneSubtasks, total: issue.totalSubtasks }
@@ -66,7 +73,9 @@ export function mapIssue(issue: ApiIssue): Card {
       id: pr.id,
       number: pr.number,
       url: pr.url,
+      repositoryName: pr.repositoryName,
       state: pr.isMerged ? 'merged' : pr.isClosed ? 'closed' : 'open',
+      assignees: pr.assignees.map(mapUser),
     })),
     url: issue.url,
     createdAgo: issue.createdAgo,

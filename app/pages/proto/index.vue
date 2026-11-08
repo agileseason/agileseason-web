@@ -71,6 +71,13 @@ const PR_TITLE: Record<string, string> = {
   closed: 'закрыт',
 }
 
+const PR_BADGE: Record<string, string> = {
+  open: 'bg-green-lt',
+  merged: 'bg-purple-lt',
+  closed: 'bg-secondary-lt',
+}
+
+
 // ---------- добавление карточки ----------
 let nextId = -1 // локальные (ещё не сохранённые) карточки имеют отрицательные id
 const addingTo = ref<number | null>(null)
@@ -360,17 +367,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                         <div class="card-body">
                           <div class="d-flex align-items-start gap-2">
-                            <h2 class="card-title mb-0 flex-fill">
-                              <a
-                                v-if="card.url"
-                                :href="card.url"
-                                target="_blank"
-                                rel="noopener"
-                                class="text-secondary text-decoration-none me-1"
-                                @click.stop
-                              >#{{ card.number }}</a>
-                              {{ card.title }}
-                            </h2>
+                            <h2 class="card-title mb-0 flex-fill">{{ card.title }}</h2>
                             <IconCircleCheck
                               v-if="card.isClosed"
                               class="icon icon-inline text-green flex-shrink-0"
@@ -380,6 +377,20 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                           <div v-if="card.description" class="text-secondary mt-2 card-description">
                             {{ card.description }}
+                          </div>
+
+                          <!-- Номер задачи и репозиторий -->
+                          <div v-if="card.number" class="mt-2 small">
+                            <a
+                              v-if="card.url"
+                              :href="card.url"
+                              target="_blank"
+                              rel="noopener"
+                              class="text-decoration-none"
+                              @click.stop
+                            ><strong>#{{ card.number }}</strong></a>
+                            <strong v-else>#{{ card.number }}</strong>
+                            <span v-if="card.repositoryName" class="text-secondary">{{ card.repositoryName }}</span>
                           </div>
 
                           <!-- Метки -->
@@ -433,22 +444,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                                 </span>
                               </div>
 
-                              <!-- Pull request-ы -->
-                              <div v-for="pr in card.pullRequests" :key="pr.id" class="col-auto">
-                                <a
-                                  :href="pr.url"
-                                  target="_blank"
-                                  rel="noopener"
-                                  class="text-decoration-none"
-                                  :class="PR_COLOR[pr.state]"
-                                  :title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
-                                  @click.stop
-                                >
-                                  <IconGitPullRequest class="icon icon-inline" />
-                                  {{ pr.number }}
-                                </a>
-                              </div>
-
                               <!-- Комментарии -->
                               <div v-if="card.comments" class="col-auto">
                                 <span class="text-secondary" title="Комментарии">
@@ -458,6 +453,48 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                               </div>
                             </div>
                           </div>
+
+                          <!-- Pull request-ы -->
+                          <ul v-if="card.pullRequests.length" class="list-unstyled mt-3 mb-0 pr-list">
+                            <li
+                              v-for="pr in card.pullRequests"
+                              :key="pr.id"
+                              class="d-flex align-items-center gap-2 pr-item"
+                            >
+                              <IconGitPullRequest
+                                class="icon icon-inline flex-shrink-0"
+                                :class="PR_COLOR[pr.state]"
+                              />
+                              <a
+                                :href="pr.url"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-decoration-none text-truncate"
+                                :title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
+                                @click.stop
+                              >
+                                <strong>#{{ pr.number }}</strong>
+                                <span class="text-secondary">{{ pr.repositoryName }}</span>
+                              </a>
+                              <span class="badge ms-auto flex-shrink-0" :class="PR_BADGE[pr.state]">
+                                {{ PR_TITLE[pr.state] }}
+                              </span>
+                              <div
+                                v-if="pr.assignees?.length"
+                                class="avatar-list avatar-list-stacked avatar-list-xs flex-shrink-0"
+                              >
+                                <span
+                                  v-for="user in pr.assignees"
+                                  :key="user.name"
+                                  class="avatar avatar-xs"
+                                  :title="user.name"
+                                  :style="user.src ? { backgroundImage: `url(${user.src})` } : undefined"
+                                >
+                                  <template v-if="!user.src">{{ initials(user.name) }}</template>
+                                </span>
+                              </div>
+                            </li>
+                          </ul>
                         </div>
                       </div>
                     </div>
@@ -561,6 +598,14 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 .card-description {
   overflow-wrap: anywhere;
+}
+
+.pr-list {
+  border-top: 1px solid var(--tblr-border-color);
+  padding-top: 0.5rem;
+}
+.pr-item + .pr-item {
+  margin-top: 0.375rem;
 }
 
 .column-header {

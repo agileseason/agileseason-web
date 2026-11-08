@@ -86,12 +86,15 @@ export interface CardPullRequest {
   id: number
   number: number
   url: string
+  repositoryName: string
   state: 'open' | 'merged' | 'closed'
+  assignees: CardAssignee[]
 }
 
 export interface Card {
   id: number
   number?: number
+  repositoryName?: string
   title: string
   description?: string
   status?: CardStatus // цветная полоска сверху
