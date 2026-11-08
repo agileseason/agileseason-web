@@ -32,6 +32,9 @@ importers:
       nuxt-storage:
         specifier: ^1.2.2
         version: 1.2.2
+      typograf:
+        specifier: ^7.9.1
+        version: 7.9.1
       vue:
         specifier: ^3.5.44
         version: 3.5.44
@@ -2489,6 +2492,10 @@ packages:
   type-fest@5.10.0:
     resolution: {integrity: sha512-NoSdpq/WEiAg5sjmBkmV/hfxv6HJH4NqPNrqjtSO5CwRmpsDfaf4begxW34KdJykH/l1yHtwBWQkCRdoXO8mPA==}
     engines: {node: '>=20'}
+
+  typograf@7.9.1:
+    resolution: {integrity: sha512-dlOdmWyGkwkH5JhNLbUvcKxKwKwEL2muaZbm3AqOPPpI5gzNSxjOElVN03INqj+0N5+B7xCmAYb51RaQtHLb/g==}
+    engines: {node: '>= 4'}
 
   ufo@1.6.4:
     resolution: {integrity: sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA==}
@@ -5666,6 +5673,8 @@ snapshots:
   type-fest@5.10.0:
     dependencies:
       tagged-tag: 1.0.0
+
+  typograf@7.9.1: {}
 
   ufo@1.6.4: {}
 

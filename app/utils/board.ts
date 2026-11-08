@@ -10,6 +10,16 @@ import type {
   Column,
 } from '~/types/board'
 
+// Typograf для неразрывных пробелов после союзов и предлогов
+import Typograf from 'typograf'
+const tp = new Typograf({ locale: ['ru', 'en-US'] });
+tp.disableRule('*') // выключаем всё, кроме нужного: кавычки, тире и т.д. не трогаем
+tp.enableRule('common/nbsp/afterShortWord')
+tp.enableRule('ru/nbsp/*') // предлоги, союзы, частицы для русского
+
+export const nbsp = (text: string) => tp.execute(text)
+// ------------------------------------
+
 // Какой label даёт цветную полоску сверху (по приоритету)
 const STATUS_BY_LABEL: [string, CardStatus][] = [
   ['bug', 'red'],
