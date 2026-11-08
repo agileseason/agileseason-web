@@ -375,23 +375,34 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                             />
                           </div>
 
+                          <!-- Описание пока скрыто
                           <div v-if="card.description" class="text-secondary mt-2 card-description">
                             {{ card.description }}
                           </div>
+                          -->
 
-                          <!-- Номер задачи и репозиторий -->
-                          <div v-if="card.number" class="mt-2">
-                            <a
-                              v-if="card.url"
-                              :href="card.url"
-                              target="_blank"
-                              rel="noopener"
-                              class="text-decoration-none link-secondary"
-                              @click.stop
-                            ><strong>#{{ card.number }}</strong>
-                            <span v-if="card.repositoryName">&nbsp;{{ card.repositoryName }}</span>
-														</a>
-                            <strong v-else>#{{ card.number }}</strong>
+                          <!-- Номер задачи, репозиторий и время создания -->
+                          <div
+                            v-if="card.number || card.createdAgo"
+                            class="d-flex align-items-center justify-content-between gap-2 mt-2"
+                          >
+                            <div v-if="card.number" class="text-truncate">
+                              <a
+                                v-if="card.url"
+                                :href="card.url"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-decoration-none link-secondary"
+                                @click.stop
+                              >
+                                <strong>#{{ card.number }}</strong>
+                                <span v-if="card.repositoryName">&nbsp;{{ card.repositoryName }}</span>
+                              </a>
+                              <strong v-else>#{{ card.number }}</strong>
+                            </div>
+                            <span v-if="card.createdAgo" class="text-secondary small ms-auto flex-shrink-0" title="Создана">
+                              {{ card.createdAgo }}
+                            </span>
                           </div>
 
                           <!-- Метки -->
@@ -432,9 +443,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                                     <template v-if="!user.src">{{ initials(user.name) }}</template>
                                   </span>
                                 </div>
-                                <span v-else-if="card.createdAgo" class="text-secondary small">
-                                  {{ card.createdAgo }}
-                                </span>
                               </div>
 
                               <!-- Подзадачи -->
