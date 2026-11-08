@@ -8,6 +8,8 @@ import {
   IconAlignLeft,
   IconCircleCheck,
   IconGitPullRequest,
+  IconGitMerge,
+  IconGitPullRequestClosed,
   IconX,
   IconChevronsLeft,
   IconChevronsRight,
@@ -63,7 +65,13 @@ function subtasksPercent(card: Card) {
 const PR_COLOR: Record<string, string> = {
   open: 'text-green',
   merged: 'text-purple',
-  closed: 'text-secondary',
+  closed: 'text-red',
+}
+
+const PR_ICON = {
+  open: IconGitPullRequest,
+  merged: IconGitMerge,
+  closed: IconGitPullRequestClosed,
 }
 
 const PR_TITLE: Record<string, string> = {
@@ -479,7 +487,8 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                               class="d-flex align-items-center justify-content-between pr-item"
                             >
 															<div>
-																<IconGitPullRequest
+																<component
+																	:is="PR_ICON[pr.state]"
 																	class="icon icon-inline flex-shrink-0 me-1"
 																	:class="PR_COLOR[pr.state]"
 																/>
