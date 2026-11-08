@@ -74,19 +74,6 @@ const PR_ICON = {
   closed: IconGitPullRequestClosed,
 }
 
-const PR_TITLE: Record<string, string> = {
-  open: 'открыт',
-  merged: 'влит',
-  closed: 'закрыт',
-}
-
-const PR_BADGE: Record<string, string> = {
-  open: 'bg-green-lt',
-  merged: 'bg-purple-lt',
-  closed: 'bg-secondary-lt',
-}
-
-
 // ---------- добавление карточки ----------
 let nextId = -1 // локальные (ещё не сохранённые) карточки имеют отрицательные id
 const addingTo = ref<number | null>(null)
@@ -376,7 +363,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                         <div class="card-body">
                           <div class="d-flex align-items-start gap-2">
-                            <h2 class="card-title mb-0 flex-fill">{{ card.title }}</h2>
+                            <h2 class="card-title mb-0 flex-fill">{{ nbsp(card.title) }}</h2>
                             <IconCircleCheck
                               v-if="card.isClosed"
                               class="icon icon-inline text-green flex-shrink-0"
@@ -497,7 +484,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 																	target="_blank"
 																	rel="noopener"
 																	class="text-decoration-none text-truncate link-secondary"
-																	:title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
 																	@click.stop
 																>
 																	<strong>#{{ pr.number }}</strong>&nbsp;{{ pr.repositoryName }}
