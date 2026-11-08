@@ -380,17 +380,18 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                           </div>
 
                           <!-- Номер задачи и репозиторий -->
-                          <div v-if="card.number" class="mt-2 small">
+                          <div v-if="card.number" class="mt-2">
                             <a
                               v-if="card.url"
                               :href="card.url"
                               target="_blank"
                               rel="noopener"
-                              class="text-decoration-none"
+                              class="text-decoration-none link-secondary"
                               @click.stop
-                            ><strong>#{{ card.number }}</strong></a>
+                            ><strong>#{{ card.number }}</strong>
+                            <span v-if="card.repositoryName">&nbsp;{{ card.repositoryName }}</span>
+														</a>
                             <strong v-else>#{{ card.number }}</strong>
-                            <span v-if="card.repositoryName" class="text-secondary">{{ card.repositoryName }}</span>
                           </div>
 
                           <!-- Метки -->
@@ -407,9 +408,9 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                           <!-- Прогресс подзадач -->
                           <div v-if="card.subtasks" class="mt-3">
-                            <div class="progress progress-sm">
+                            <div class="progress">
                               <div
-                                class="progress-bar bg-green"
+                                class="progress-bar"
                                 role="progressbar"
                                 :style="{ width: `${subtasksPercent(card)}%` }"
                               ></div>
@@ -459,26 +460,24 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                             <li
                               v-for="pr in card.pullRequests"
                               :key="pr.id"
-                              class="d-flex align-items-center gap-2 pr-item"
+                              class="d-flex align-items-center justify-content-between pr-item"
                             >
-                              <IconGitPullRequest
-                                class="icon icon-inline flex-shrink-0"
-                                :class="PR_COLOR[pr.state]"
-                              />
-                              <a
-                                :href="pr.url"
-                                target="_blank"
-                                rel="noopener"
-                                class="text-decoration-none text-truncate"
-                                :title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
-                                @click.stop
-                              >
-                                <strong>#{{ pr.number }}</strong>
-                                <span class="text-secondary">{{ pr.repositoryName }}</span>
-                              </a>
-                              <span class="badge ms-auto flex-shrink-0" :class="PR_BADGE[pr.state]">
-                                {{ PR_TITLE[pr.state] }}
-                              </span>
+															<div>
+																<IconGitPullRequest
+																	class="icon icon-inline flex-shrink-0 me-1"
+																	:class="PR_COLOR[pr.state]"
+																/>
+																<a
+																	:href="pr.url"
+																	target="_blank"
+																	rel="noopener"
+																	class="text-decoration-none text-truncate link-secondary"
+																	:title="`PR #${pr.number} — ${PR_TITLE[pr.state]}`"
+																	@click.stop
+																>
+																	<strong>#{{ pr.number }}</strong>&nbsp;{{ pr.repositoryName }}
+																</a>
+															</div>
                               <div
                                 v-if="pr.assignees?.length"
                                 class="avatar-list avatar-list-stacked avatar-list-xs flex-shrink-0"
@@ -602,7 +601,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 .pr-list {
   border-top: 1px solid var(--tblr-border-color);
-  padding-top: 0.5rem;
+  padding-top: 0.8rem;
 }
 .pr-item + .pr-item {
   margin-top: 0.375rem;

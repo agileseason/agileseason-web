@@ -14,6 +14,102 @@
                     "isAutoClose": false,
                     "issues": [
                         {
+                            "id": 9281,
+                            "number": 346,
+                            "title": "Аудит кода project",
+                            "body": "## TODO list\n- [x] model 1\n- [ ] model 2\n\n```\nВ компоненте project_part.vue есть редактирование элементов проекта.\n\nПри редактировании:\n- на desktop сохранение происходит через Enter;\n- на mobile должна быть отдельная кнопка с галочкой;\n- крестик должен показываться только во время редактирования;\n- при обычном добавлении нового элемента крестик показываться не должен;\n- после выбора checkbox строка не должна моргать;\n- при редактировании должен корректно восстанавливаться focus на Input;\n- длинное название должно переноситься;\n- desktop и mobile UI должны сохранить существующее поведение.\n\nСейчас нужно проверить реализацию и исправить найденные проблемы.\n\nИзучи:\n- project_part.vue\n- используемый Input-компонент\n- связанные API-методы\n- существующие composables, если они используются\n\nНе меняй api.js.\nНе добавляй зависимости.\nНе переписывай компоненты без необходимости.\n\nСначала проанализируй текущую реализацию.\nЗатем внеси минимальный patch.\n\nПосле изменений объясни:\n1. какая была причина проблемы;\n2. что именно изменилось;\n3. почему решение не ломает desktop/mobile;\n4. какие edge cases ты проверил.\n```",
+                            "labels": [],
+                            "assignees": [
+                                {
+                                    "login": "blackchestnut",
+                                    "url": "https://github.com/blackchestnut",
+                                    "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?u=b07d417cb29b681dc2db4fb0e0a3ff2d165ceae7\u0026v=4"
+                                }
+                            ],
+                            "color": null,
+                            "isBody": true,
+                            "isClosed": true,
+                            "isArchived": false,
+                            "totalSubtasks": 3,
+                            "doneSubtasks": 2,
+                            "position": 8,
+                            "url": "https://github.com/mybudget-ws/mybudget3/issues/346",
+                            "repositoryName": "mybudget3",
+                            "repositoryFullName": "mybudget-ws/mybudget3",
+                            "createdAt": "2026-10-16T19:17:15Z",
+                            "createdAgo": "21 days ago",
+                            "author": {
+                                "login": "blackchestnut",
+                                "url": "https://github.com/blackchestnut",
+                                "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?u=b07d417cb29b681dc2db4fb0e0a3ff2d165ceae7\u0026v=4"
+                            },
+                            "columnId": 203,
+                            "commentsCount": 0,
+                            "ageDays": 20,
+                            "pullRequests": [
+                                {
+                                    "id": 2228,
+                                    "number": 347,
+                                    "isClosed": true,
+                                    "isMerged": false,
+                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/347",
+                                    "repositoryName": "mybudget3",
+                                    "assignees": [
+                                        {
+                                            "login": "blackchestnut",
+                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
+                                        },
+																				{
+																					"login": "toucan-v8",
+																					"avatarUrl": "https://avatars.githubusercontent.com/u/67754856?v=4"
+																				}
+                                    ]
+                                },
+                                {
+                                    "id": 2232,
+                                    "number": 350,
+                                    "isClosed": true,
+                                    "isMerged": false,
+                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/350",
+                                    "repositoryName": "mybudget3",
+                                    "assignees": [
+                                        {
+                                            "login": "blackchestnut",
+                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 2251,
+                                    "number": 360,
+                                    "isClosed": true,
+                                    "isMerged": false,
+                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/360",
+                                    "repositoryName": "mybudget3",
+                                    "assignees": [
+                                        {
+                                            "login": "blackchestnut",
+                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": 2260,
+                                    "number": 366,
+                                    "isClosed": true,
+                                    "isMerged": true,
+                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/366",
+                                    "repositoryName": "mybudget3",
+                                    "assignees": [
+                                        {
+                                            "login": "blackchestnut",
+                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
                             "id": 9303,
                             "number": 362,
                             "title": "Функционал блога, страницы с новостями и обновлениями",
@@ -1090,98 +1186,6 @@
                                     "isClosed": true,
                                     "isMerged": true,
                                     "url": "https://github.com/mybudget-ws/mybudget3/pull/367",
-                                    "repositoryName": "mybudget3",
-                                    "assignees": [
-                                        {
-                                            "login": "blackchestnut",
-                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            "id": 9281,
-                            "number": 346,
-                            "title": "Аудит кода project",
-                            "body": "## TODO list\n- [x] model 1\n- [x] model 2\n\n```\nВ компоненте project_part.vue есть редактирование элементов проекта.\n\nПри редактировании:\n- на desktop сохранение происходит через Enter;\n- на mobile должна быть отдельная кнопка с галочкой;\n- крестик должен показываться только во время редактирования;\n- при обычном добавлении нового элемента крестик показываться не должен;\n- после выбора checkbox строка не должна моргать;\n- при редактировании должен корректно восстанавливаться focus на Input;\n- длинное название должно переноситься;\n- desktop и mobile UI должны сохранить существующее поведение.\n\nСейчас нужно проверить реализацию и исправить найденные проблемы.\n\nИзучи:\n- project_part.vue\n- используемый Input-компонент\n- связанные API-методы\n- существующие composables, если они используются\n\nНе меняй api.js.\nНе добавляй зависимости.\nНе переписывай компоненты без необходимости.\n\nСначала проанализируй текущую реализацию.\nЗатем внеси минимальный patch.\n\nПосле изменений объясни:\n1. какая была причина проблемы;\n2. что именно изменилось;\n3. почему решение не ломает desktop/mobile;\n4. какие edge cases ты проверил.\n```",
-                            "labels": [],
-                            "assignees": [
-                                {
-                                    "login": "blackchestnut",
-                                    "url": "https://github.com/blackchestnut",
-                                    "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?u=b07d417cb29b681dc2db4fb0e0a3ff2d165ceae7\u0026v=4"
-                                }
-                            ],
-                            "color": null,
-                            "isBody": true,
-                            "isClosed": true,
-                            "isArchived": false,
-                            "totalSubtasks": 2,
-                            "doneSubtasks": 2,
-                            "position": 8,
-                            "url": "https://github.com/mybudget-ws/mybudget3/issues/346",
-                            "repositoryName": "mybudget3",
-                            "repositoryFullName": "mybudget-ws/mybudget3",
-                            "createdAt": "2026-10-16T19:17:15Z",
-                            "createdAgo": "21 days ago",
-                            "author": {
-                                "login": "blackchestnut",
-                                "url": "https://github.com/blackchestnut",
-                                "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?u=b07d417cb29b681dc2db4fb0e0a3ff2d165ceae7\u0026v=4"
-                            },
-                            "columnId": 203,
-                            "commentsCount": 0,
-                            "ageDays": 20,
-                            "pullRequests": [
-                                {
-                                    "id": 2228,
-                                    "number": 347,
-                                    "isClosed": true,
-                                    "isMerged": false,
-                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/347",
-                                    "repositoryName": "mybudget3",
-                                    "assignees": [
-                                        {
-                                            "login": "blackchestnut",
-                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "id": 2232,
-                                    "number": 350,
-                                    "isClosed": true,
-                                    "isMerged": false,
-                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/350",
-                                    "repositoryName": "mybudget3",
-                                    "assignees": [
-                                        {
-                                            "login": "blackchestnut",
-                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "id": 2251,
-                                    "number": 360,
-                                    "isClosed": true,
-                                    "isMerged": false,
-                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/360",
-                                    "repositoryName": "mybudget3",
-                                    "assignees": [
-                                        {
-                                            "login": "blackchestnut",
-                                            "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?v=4"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "id": 2260,
-                                    "number": 366,
-                                    "isClosed": true,
-                                    "isMerged": true,
-                                    "url": "https://github.com/mybudget-ws/mybudget3/pull/366",
                                     "repositoryName": "mybudget3",
                                     "assignees": [
                                         {
