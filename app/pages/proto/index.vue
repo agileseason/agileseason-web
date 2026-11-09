@@ -357,10 +357,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     @update="onCardsChange(column, $event)"
                   >
                     <div v-for="card in column.cards" :key="card.id" class="kanban-card-wrapper col-12">
-                      <div class="card card-sm kanban-card">
-                        <!-- Цветная полоска сверху (по типу задачи) -->
-                        <div v-if="card.status" class="card-status-top" :class="`bg-${card.status}`"></div>
-
+                      <div class="card card-sm kanban-card" :class="card.color && `bg-${card.color}-lt`">
                         <div class="card-body">
                           <div class="d-flex align-items-start gap-2">
                             <h2 class="card-title mb-0 flex-fill">{{ nbsp(card.title) }}</h2>

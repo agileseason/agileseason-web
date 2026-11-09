@@ -26,7 +26,7 @@
                                     "avatarUrl": "https://avatars.githubusercontent.com/u/2400100?u=b07d417cb29b681dc2db4fb0e0a3ff2d165ceae7\u0026v=4"
                                 }
                             ],
-                            "color": null,
+                            "color": "teal",
                             "isBody": true,
                             "isClosed": true,
                             "isArchived": false,
@@ -116,7 +116,7 @@
                             "body": "Было бы здорово писать в формате markdown страницы. Первый кандидат на добавление новости, о том, что выходит версия 3, и о том, что версия 2 доступна по старому урлу 2.mybudget.ws",
                             "labels": [],
                             "assignees": [],
-                            "color": null,
+                            "color": "red",
                             "isBody": true,
                             "isClosed": false,
                             "isArchived": false,

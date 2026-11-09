@@ -69,7 +69,12 @@ export interface BoardResponse {
 }
 
 // ---------- Типы для UI ----------
-export type CardStatus = 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'purple'
+export const CARD_COLORS = [
+  'blue', 'azure', 'indigo', 'purple', 'pink', 'red',
+  'orange', 'yellow', 'lime', 'green', 'teal', 'cyan',
+] as const
+
+export type CardColor = (typeof CARD_COLORS)[number]
 
 export interface CardLabel {
   name: string
@@ -97,7 +102,7 @@ export interface Card {
   repositoryName?: string
   title: string
   description?: string
-  status?: CardStatus // цветная полоска сверху
+  color?: CardColor // заливка всей карточки (bg-COLOR-lt)
   labels: CardLabel[]
   assignees: CardAssignee[]
   comments: number

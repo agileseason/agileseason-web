@@ -1,3 +1,4 @@
+import { CARD_COLORS } from '~/types/board'
 import type {
   ApiBoard,
   ApiIssue,
@@ -5,8 +6,8 @@ import type {
   ApiUser,
   Card,
   CardAssignee,
+  CardColor,
   CardLabel,
-  CardStatus,
   Column,
 } from '~/types/board'
 
@@ -20,18 +21,9 @@ tp.enableRule('ru/nbsp/*') // предлоги, союзы, частицы дл�
 export const nbsp = (text: string) => tp.execute(text)
 // ------------------------------------
 
-// Какой label даёт цветную полоску сверху (по приоритету)
-const STATUS_BY_LABEL: [string, CardStatus][] = [
-  ['bug', 'red'],
-  ['question', 'orange'],
-  ['design', 'purple'],
-  ['enhancement', 'blue'],
-  ['dependencies', 'yellow'],
-]
-
-function pickStatus(labels: ApiLabel[]): CardStatus | undefined {
-  const names = new Set(labels.map(l => l.name))
-  return STATUS_BY_LABEL.find(([name]) => names.has(name))?.[1]
+// Бэкенд присылает произвольную строку, пропускаем только известные цвета
+function pickColor(color: string | null): CardColor | undefined {
+  return CARD_COLORS.find(c => c === color)
 }
 
 // Контрастный цвет текста для бейджа
@@ -72,7 +64,7 @@ export function mapIssue(issue: ApiIssue): Card {
     repositoryName: issue.repositoryName,
     title: issue.title,
     description: makeDescription(issue.body),
-    status: pickStatus(issue.labels),
+    color: pickColor(issue.color),
     labels: issue.labels.map(mapLabel),
     assignees: issue.assignees.map(mapUser),
     comments: issue.commentsCount,
