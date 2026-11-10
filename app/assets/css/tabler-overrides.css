@@ -27,3 +27,7 @@
 .btn.active {
   box-shadow: none;
 }
+
+.card-sm>.card-body {
+  padding: 0.63rem;
+}
