@@ -1,6 +1,5 @@
-# Nuxt Minimal Starter
-
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+# AgileSeason
+> [web]
 
 ## Setup
 
@@ -12,10 +11,10 @@ pnpm install
 
 ## Development Server
 
-Start the development server on `http://localhost:3000`:
+Start the development server on `http://localhost:3300`:
 
 ```bash
-pnpm dev
+pnpm dev -p 3300
 ```
 
 ## Production
