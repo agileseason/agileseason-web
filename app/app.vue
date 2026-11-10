@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { getData, setData } from 'nuxt-storage/local-storage';
 import {
   IconMoon,
   IconSun,
@@ -17,23 +16,26 @@ const navbarToggler = ref(null);
 let closeAfterOpen = false;
 
 // Theme START ---------------
+const themeCookie = useCookie<'light' | 'dark'>('theme', {
+  maxAge: 60 * 60 * 24 * 900, // 900 дней
+  default: () => 'light',
+});
+
 const theme = computed(() => appConfig.theme.dark ? 'dark' : 'light');
 const queryTheme = route.query.theme;
 
-if (queryTheme && (queryTheme === 'light' || queryTheme === 'dark')) {
-  appConfig.theme.dark = queryTheme === 'dark';
-  setData('theme', queryTheme, 100, 'd');
-} else {
-  appConfig.theme.dark = getData('theme') === 'dark';
+if (queryTheme === 'light' || queryTheme === 'dark') {
+  themeCookie.value = queryTheme;
 }
+appConfig.theme.dark = themeCookie.value === 'dark';
 
 watch(
   () => route.query.theme,
   (queryTheme) => {
     if (queryTheme !== 'light' && queryTheme !== 'dark') return;
 
+    themeCookie.value = queryTheme;
     appConfig.theme.dark = queryTheme === 'dark';
-    setData('theme', queryTheme, 100, 'd');
   }
 );
 
@@ -47,6 +49,16 @@ useHead({
   bodyAttrs: {
     class: 'sticky-top', // 'layout-fluid',
   },
+  // Фон и color-scheme применяются сразу, до загрузки CSS Tabler.
+  // Проверьте цвет тёмного фона в DevTools и при необходимости поправьте #182433.
+  style: [
+    {
+      innerHTML: `
+        html[data-bs-theme="dark"] { color-scheme: dark; background-color: #182433; }
+        html[data-bs-theme="light"] { color-scheme: light; background-color: #fff; }
+      `,
+    },
+  ],
 });
 // Theme END ---------------
 
@@ -108,7 +120,7 @@ watch(() => route.fullPath, closeMenu)
           <span class='navbar-toggler-icon' />
         </button>
 
-        <NuxtLink to='/' title='appConfig.title' class='navbar-brand pe-0 pe-md-3'>
+        <NuxtLink to='/proto' title='appConfig.title' class='navbar-brand pe-0 pe-md-3'>
           {{ appConfig.title }}
         </NuxtLink>
 
@@ -131,11 +143,11 @@ watch(() => route.fullPath, closeMenu)
               </NuxtLink>
             </div>
             <div class='nav-item'>
-              <NuxtLink v-if='!isSignedIn' to='/' class='btn btn-outline-primary'>
+              <NuxtLink v-if='!isSignedIn' to='/proto' class='btn btn-outline-primary'>
                 <IconUserCircle size='20' stroke-width='1' />
                 <span class='ms-2 d-none d-xl-block'>Вход</span>
               </NuxtLink>
-              <NuxtLink v-if='isSignedIn' to='/' class='nav-link'>
+              <NuxtLink v-if='isSignedIn' to='/proto' class='nav-link'>
                 <IconUserCircle stroke-width='1' />
               </NuxtLink>
             </div>
@@ -151,7 +163,7 @@ watch(() => route.fullPath, closeMenu)
             <li class='nav-item'>
               <NuxtLink class='nav-link' to='/proto'>
                 <IconReceipt size='20' stroke-width='1' />
-                <span class='nav-link-title ms-1'>Proto</span>
+                <span class='nav-link-title ms-1'>TODO</span>
               </NuxtLink>
             </li>
           </ul>
