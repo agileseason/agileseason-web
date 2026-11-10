@@ -8,4 +8,4 @@ export default defineNuxtConfig({
     '@tabler/core/dist/css/tabler-themes.min.css',
     '~/assets/css/tabler-overrides.css',
   ],
-})
+});
