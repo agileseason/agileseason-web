@@ -226,11 +226,16 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
   <!-- BEGIN PAGE BODY -->
   <div class="page-body">
     <div class="container-fluid">
-      <!-- Загрузка -->
-      <div v-if="isLoading && !columns.length" class="text-center text-secondary py-6">
-        <div class="spinner-border mb-3" role="status"></div>
-        <div>Загружаем доску…</div>
-      </div>
+			<!-- Загрузка -->
+			<div
+				v-if="isLoading && !columns.length"
+				class="d-flex justify-content-center align-items-center"
+				style="min-height: 50vh"
+			>
+				<div class="spinner-border text-primary" role="status">
+					<span class="visually-hidden">Загрузка…</span>
+				</div>
+			</div>
 
       <!-- Ошибка -->
       <div v-else-if="loadError" class="alert alert-danger" role="alert">

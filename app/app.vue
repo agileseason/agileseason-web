@@ -108,7 +108,7 @@ watch(() => route.fullPath, closeMenu)
           <span class='navbar-toggler-icon' />
         </button>
 
-        <NuxtLink to='/proto' title='appConfig.title' class='navbar-brand pe-0 pe-md-3'>
+        <NuxtLink to='/' title='appConfig.title' class='navbar-brand pe-0 pe-md-3'>
           {{ appConfig.title }}
         </NuxtLink>
 
@@ -131,11 +131,11 @@ watch(() => route.fullPath, closeMenu)
               </NuxtLink>
             </div>
             <div class='nav-item'>
-              <NuxtLink v-if='!isSignedIn' to='/proto' class='btn btn-outline-primary'>
+              <NuxtLink v-if='!isSignedIn' to='/' class='btn btn-outline-primary'>
                 <IconUserCircle size='20' stroke-width='1' />
                 <span class='ms-2 d-none d-xl-block'>Вход</span>
               </NuxtLink>
-              <NuxtLink v-if='isSignedIn' to='/proto' class='nav-link'>
+              <NuxtLink v-if='isSignedIn' to='/' class='nav-link'>
                 <IconUserCircle stroke-width='1' />
               </NuxtLink>
             </div>
@@ -151,7 +151,7 @@ watch(() => route.fullPath, closeMenu)
             <li class='nav-item'>
               <NuxtLink class='nav-link' to='/proto'>
                 <IconReceipt size='20' stroke-width='1' />
-                <span class='nav-link-title ms-1'>TODO</span>
+                <span class='nav-link-title ms-1'>Proto</span>
               </NuxtLink>
             </li>
           </ul>
