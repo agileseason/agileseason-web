@@ -197,6 +197,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 <template>
   <!-- BEGIN PAGE HEADER -->
+  <!-- TODO: Вынести название доски в меню
   <div class="page-header d-print-none">
     <div class="container-fluid">
       <div class="row g-2 align-items-center">
@@ -219,6 +220,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
       </div>
     </div>
   </div>
+	-->
   <!-- END PAGE HEADER -->
 
   <!-- BEGIN PAGE BODY -->
@@ -399,7 +401,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                           </div>
 
                           <!-- Метки -->
-                          <div v-if="card.labels.length" class="d-flex flex-wrap gap-1 mt-3">
+                          <div v-if="card.labels.length" class="d-flex flex-wrap gap-1 mt-2">
                             <span
                               v-for="label in card.labels"
                               :key="label.name"
@@ -411,7 +413,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                           </div>
 
                           <!-- Прогресс подзадач -->
-                          <div v-if="card.subtasks" class="mt-3">
+                          <div v-if="card.subtasks" class="mt-2">
                             <div class="progress">
                               <div
                                 class="progress-bar"
@@ -421,7 +423,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                             </div>
                           </div>
 
-                          <div class="mt-3">
+                          <div class="mt-2">
                             <div class="row align-items-center g-2">
                               <!-- Есть описание -->
                               <div v-if="card.description" class="col-auto">
@@ -581,7 +583,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 /* Колонка прокручивается по вертикали, если карточек много */
 .kanban-scroll {
-  max-height: calc(100vh - 16rem);
+  max-height: calc(100vh - 9rem);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0.25rem;
