@@ -70,8 +70,18 @@ export interface BoardResponse {
 
 // ---------- Типы для UI ----------
 export const CARD_COLORS = [
-  'blue', 'azure', 'indigo', 'purple', 'pink', 'red',
-  'orange', 'yellow', 'lime', 'green', 'teal', 'cyan',
+  'blue',
+  'azure',
+  'indigo',
+  'purple',
+  'pink',
+  'red',
+  'orange',
+  'yellow',
+  'lime',
+  'green',
+  'teal',
+  'cyan',
 ] as const
 
 export type CardColor = (typeof CARD_COLORS)[number]
