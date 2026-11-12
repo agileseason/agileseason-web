@@ -3,6 +3,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   ssr: false,
+  modules: [
+    '@nuxt/eslint',
+  ],
   css: [
     '@tabler/core/dist/css/tabler.min.css',
     '@tabler/core/dist/css/tabler-themes.min.css',

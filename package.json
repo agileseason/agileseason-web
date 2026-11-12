@@ -14,7 +14,6 @@
     "@tabler/icons": "^3.50.0",
     "@tabler/icons-vue": "^3.50.0",
     "delay": "^7.0.0",
-    "eslint": "^10.14.0",
     "graphql": "^17.0.2",
     "graphql-request": "^7.4.0",
     "nuxt": "^4.6.3",
@@ -23,5 +22,10 @@
     "vue": "^3.5.44",
     "vue-draggable-plus": "^0.6.1",
     "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "eslint": "^10.14.0",
+    "typescript": "~6.0.3"
   }
 }
