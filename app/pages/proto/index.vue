@@ -228,7 +228,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
           <h1 class='page-title'>{{ boardName }}</h1>
        </div>
         <div class='col-auto'>
-          <div class='btn-group' role='group' aria-label='Вид'>
+          <div class='btn-group bg-fill-tertiary' role='group' aria-label='Вид'>
             <button
               type='button'
               class='btn btn-sm'
