@@ -117,7 +117,7 @@ function addCard(column: Column) {
   const title = newTitle.value.trim()
   if (!title) return
   // TODO: заменить на мутацию создания issue, id взять из ответа
-  column.cards.push({
+  column.cards.unshift({
     id: nextId--,
     title,
     labels: [],
@@ -231,7 +231,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
           <div class='btn-group bg-fill-tertiary' role='group' aria-label='Вид'>
             <button
               type='button'
-              class='btn btn-sm'
+              class='btn btn-sm bg-fill-tertiary'
               :class='view === "board" ? "btn-outline-primary" : "btn-outline-secondary"'
               :aria-pressed='view === "board"'
               @click='view = "board"'
@@ -293,9 +293,10 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         <!-- Перетаскивание колонок (за заголовок) -->
         <VueDraggable
           v-model='columns'
-          class='d-flex align-items-start gap-3'
+          class='column d-flex align-items-start gap-3'
           handle='.column-header'
           :animation='200'
+          chosen-class='kanban-chosen'
           ghost-class='kanban-ghost'
         >
           <div
@@ -953,7 +954,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 }
 
 .kanban-ghost {
-  opacity: 0.4;
+  opacity: 0.3;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
@@ -962,6 +963,10 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 .kanban-chosen {
   border: none !important;
   outline: none !important;
+}
+
+.kanban-chosen.kanban-column {
+  background-color: transparent;
 }
 
 .kanban-chosen .card {
