@@ -231,7 +231,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
           <div class='btn-group bg-fill-tertiary' role='group' aria-label='Вид'>
             <button
               type='button'
-              class='btn btn-sm bg-fill-tertiary'
+              class='btn btn-sm'
               :class='view === "board" ? "btn-outline-primary" : "btn-outline-secondary"'
               :aria-pressed='view === "board"'
               @click='view = "board"'
