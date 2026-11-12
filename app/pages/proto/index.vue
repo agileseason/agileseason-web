@@ -14,6 +14,10 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconRefresh,
+  IconLayoutKanban,
+  IconTable,
+  IconChevronDown,
+  IconChevronRight,
 } from '@tabler/icons-vue'
 import { fetchBoard, moveIssue } from '~/api/board'
 import { mapBoard } from '~/utils/board'
@@ -23,7 +27,6 @@ const BOARD_ID = 42
 
 // ---------- загрузка данных ----------
 const boardName = ref('Задачи')
-const repositoryName = ref('')
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const loadError = ref('')
@@ -34,7 +37,6 @@ async function load() {
   try {
     const board = await fetchBoard(BOARD_ID)
     boardName.value = board.name
-    repositoryName.value = board.repositories[0]?.fullName ?? ''
     columns.value = mapBoard(board)
   } catch (e) {
     console.error(e)
@@ -45,6 +47,28 @@ async function load() {
 }
 
 onMounted(load)
+
+// ---------- вид: доска / таблица ----------
+type ViewMode = 'board' | 'table'
+const VIEW_KEY = 'board-view-mode'
+const view = ref<ViewMode>('board')
+
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(VIEW_KEY)
+    if (saved === 'board' || saved === 'table') view.value = saved
+  } catch { /* localStorage недоступен */ }
+})
+
+watch(view, (value) => {
+  // при смене вида закрываем открытые формы, чтобы они не «зависли» скрытыми
+  cancelAdd()
+  cancelAddColumn()
+  editingColumnId.value = null
+  try {
+    localStorage.setItem(VIEW_KEY, value)
+  } catch { /* ignore */ }
+})
 
 // ---------- helpers ----------
 function initials(name: string) {
@@ -201,8 +225,31 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
     <div class='container-fluid'>
       <div class='row g-2 align-items-center'>
         <div class='col'>
-          <div v-if='repositoryName' class='page-pretitle'>{{ repositoryName }}</div>
           <h1 class='page-title'>{{ boardName }}</h1>
+       </div>
+        <div class='col-auto'>
+          <div class='btn-group' role='group' aria-label='Вид'>
+            <button
+              type='button'
+              class='btn btn-sm'
+              :class='view === "board" ? "btn-outline-primary" : "btn-outline-secondary"'
+              :aria-pressed='view === "board"'
+              @click='view = "board"'
+            >
+              <IconLayoutKanban class='icon' />
+              Доска
+            </button>
+            <button
+              type='button'
+              class='btn btn-sm'
+              :class='view === "table" ? "btn-outline-primary" : "btn-outline-secondary"'
+              :aria-pressed='view === "table"'
+              @click='view = "table"'
+            >
+              <IconTable class='icon' />
+              Таблица
+            </button>
+          </div>
         </div>
         <div class='col-auto'>
           <button
@@ -242,7 +289,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
       </div>
 
       <!-- Доска -->
-      <div v-else class='kanban-board d-flex align-items-start gap-3 pb-3'>
+      <div v-else-if='view === "board"' class='kanban-board d-flex align-items-start gap-3 pb-3'>
         <!-- Перетаскивание колонок (за заголовок) -->
         <VueDraggable
           v-model='columns'
@@ -561,6 +608,258 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
           </button>
         </div>
       </div>
+
+      <!-- Таблица: задачи сгруппированы по колонкам -->
+      <div v-else class='kanban-table pb-3'>
+        <div class='table-scroll'>
+          <div class='table-inner'>
+            <!-- Заголовки столбцов -->
+            <div class='table-row-grid table-head text-secondary small fw-bold text-uppercase px-3 pb-2'>
+              <div>Задача</div>
+              <div>Номер</div>
+              <div>Детали</div>
+              <div>Pull request-ы</div>
+              <div>Исполнители</div>
+              <div class='text-end'>Создана</div>
+            </div>
+
+            <!-- Перетаскивание групп-колонок (за заголовок группы) -->
+            <VueDraggable
+              v-model='columns'
+              class='d-flex flex-column gap-3'
+              handle='.group-header'
+              :animation='200'
+              ghost-class='kanban-ghost'
+            >
+              <div v-for='column in columns' :key='column.id' class='card card-sm table-group'>
+                <div class='group-header d-flex align-items-center px-3 py-2' title='Перетащить колонку'>
+                  <button
+                    type='button'
+                    class='btn btn-ghost-secondary btn-icon btn-sm me-2'
+                    :aria-label='column.collapsed ? "Развернуть колонку" : "Свернуть колонку"'
+                    :title='column.collapsed ? "Развернуть колонку" : "Свернуть колонку"'
+                    @click='toggleCollapse(column)'
+                  >
+                    <IconChevronRight v-if='column.collapsed' class='icon' />
+                    <IconChevronDown v-else class='icon' />
+                  </button>
+
+                  <input
+                    v-if='editingColumnId === column.id'
+                    :ref='(el) => setTitleInput(column.id, el)'
+                    v-model='editingTitle'
+                    type='text'
+                    class='form-control form-control-sm column-title-input'
+                    @keyup.enter='saveTitle(column)'
+                    @keyup.esc='cancelEditTitle'
+                    @blur='saveTitle(column)'
+                  >
+                  <h2
+                    v-else
+                    class='mb-0 column-title text-truncate'
+                    title='Нажмите, чтобы переименовать'
+                    @click='startEditTitle(column)'
+                  >
+                    {{ column.title }}
+                  </h2>
+
+                  <span class='badge bg-secondary-lt ms-2'>{{ column.cards.length }}</span>
+                  <IconCircleCheck
+                    v-if='column.isAutoClose'
+                    class='icon ms-2 text-green flex-shrink-0'
+                    title='Задачи в этой колонке закрываются автоматически'
+                  />
+
+                  <button
+                    type='button'
+                    class='btn btn-ghost-secondary btn-icon btn-sm ms-auto flex-shrink-0'
+                    aria-label='Добавить задачу'
+                    title='Добавить задачу'
+                    @click='startAdd(column.id)'
+                  >
+                    <IconPlus class='icon' />
+                  </button>
+                </div>
+
+                <template v-if='!column.collapsed'>
+                  <!-- Добавление задачи -->
+                  <div v-if='addingTo === column.id' class='px-3 py-2 border-top'>
+                    <div class='d-flex gap-2'>
+                      <input
+                        v-model='newTitle'
+                        type='text'
+                        class='form-control form-control-sm'
+                        placeholder='Название задачи'
+                        autofocus
+                        @keyup.enter='addCard(column)'
+                        @keyup.esc='cancelAdd'
+                      >
+                      <button class='btn btn-primary btn-sm' @click='addCard(column)'>Добавить</button>
+                      <button class='btn btn-ghost-secondary btn-sm btn-icon' aria-label='Отмена' @click='cancelAdd'>
+                        <IconX class='icon' />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Строки-задачи; group='cards' позволяет переносить их между колонками -->
+                  <VueDraggable
+                    v-model='column.cards'
+                    class='table-body'
+                    group='cards'
+                    :animation='150'
+                    ghost-class='kanban-ghost'
+                    chosen-class='kanban-chosen'
+                    @add='onCardsChange(column, $event)'
+                    @update='onCardsChange(column, $event)'
+                  >
+                    <div
+                      v-for='card in column.cards'
+                      :key='card.id'
+                      class='table-row-grid table-row-item px-3 py-2'
+                      :class='card.color && `bg-${card.color}-lt`'
+                    >
+                      <!-- Задача + метки -->
+                      <div class='min-w-0'>
+                        <div class='d-flex align-items-start gap-2'>
+                          <span class='fw-medium'>{{ nbsp(card.title) }}</span>
+                          <IconCircleCheck
+                            v-if='card.isClosed'
+                            class='icon icon-inline text-green flex-shrink-0'
+                            title='Закрыта'
+                          />
+                        </div>
+                        <div v-if='card.labels.length' class='d-flex flex-wrap gap-1 mt-1'>
+                          <span
+                            v-for='label in card.labels'
+                            :key='label.name'
+                            class='badge'
+                            :style='{ backgroundColor: label.color, color: label.textColor }'
+                          >
+                            {{ label.name }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Номер / репозиторий -->
+                      <div class='text-truncate'>
+                        <template v-if='card.number'>
+                          <a
+                            v-if='card.url'
+                            :href='card.url'
+                            target='_blank'
+                            rel='noopener'
+                            class='text-decoration-none link-secondary'
+                            @click.stop
+                          >
+                            <strong>#{{ card.number }}</strong>
+                            <span v-if='card.repositoryName'>&nbsp;{{ card.repositoryName }}</span>
+                          </a>
+                          <strong v-else>#{{ card.number }}</strong>
+                        </template>
+                      </div>
+
+                      <!-- Описание / комментарии / подзадачи -->
+                      <div class='d-flex align-items-center flex-wrap gap-2 text-secondary'>
+                        <span v-if='card.description' title='Есть описание'>
+                          <IconAlignLeft class='icon icon-inline' />
+                        </span>
+                        <span v-if='card.comments' title='Комментарии'>
+                          <IconMessage class='icon icon-inline' />
+                          {{ card.comments }}
+                        </span>
+                        <span v-if='card.subtasks' title='Подзадачи'>
+                          <IconActivity class='icon icon-inline' />
+                          {{ card.subtasks.done }}/{{ card.subtasks.total }}
+                        </span>
+                      </div>
+
+                      <!-- Pull request-ы -->
+                      <div class='d-flex flex-column gap-1 min-w-0'>
+                        <div v-for='pr in card.pullRequests' :key='pr.id' class='d-flex align-items-center text-truncate'>
+                          <component
+                            :is='PR_ICON[pr.state]'
+                            class='icon icon-inline flex-shrink-0 me-1'
+                            :class='PR_COLOR[pr.state]'
+                          />
+                          <a
+                            :href='pr.url'
+                            target='_blank'
+                            rel='noopener'
+                            class='text-decoration-none text-truncate link-secondary'
+                            @click.stop
+                          >
+                            <strong>#{{ pr.number }}</strong>&nbsp;{{ pr.repositoryName }}
+                          </a>
+                        </div>
+                      </div>
+
+                      <!-- Исполнители -->
+                      <div>
+                        <div v-if='card.assignees.length' class='avatar-list avatar-list-stacked avatar-list-xs'>
+                          <span
+                            v-for='user in card.assignees'
+                            :key='user.name'
+                            class='avatar avatar-xs'
+                            :title='user.name'
+                            :style='user.src ? { backgroundImage: `url(${user.src})` } : undefined'
+                          >
+                            <template v-if='!user.src'>{{ initials(user.name) }}</template>
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Создана -->
+                      <div class='text-secondary small text-end'>{{ card.createdAgo }}</div>
+                    </div>
+                  </VueDraggable>
+                </template>
+              </div>
+            </VueDraggable>
+
+            <!-- Новая колонка -->
+            <div class='mt-3'>
+              <div v-if='isAddingColumn' class='card card-sm'>
+                <div class='card-body d-flex gap-2'>
+                  <input
+                    ref='newColumnInput'
+                    v-model='newColumnTitle'
+                    type='text'
+                    class='form-control form-control-sm'
+                    placeholder='Название колонки'
+                    @keyup.enter='addColumn'
+                    @keyup.esc='cancelAddColumn'
+                  >
+                  <button
+                    type='button'
+                    class='btn btn-primary btn-sm'
+                    :disabled='!newColumnTitle.trim()'
+                    @click='addColumn'
+                  >
+                    Добавить колонку
+                  </button>
+                  <button
+                    type='button'
+                    class='btn btn-ghost-secondary btn-sm btn-icon'
+                    aria-label='Отмена'
+                    @click='cancelAddColumn'
+                  >
+                    <IconX class='icon' />
+                  </button>
+                </div>
+              </div>
+              <button
+                v-else
+                type='button'
+                class='btn btn-outline-secondary w-100 add-column-btn'
+                @click='startAddColumn'
+              >
+                <IconPlus class='icon' />
+                Добавить колонку
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <!-- END PAGE BODY -->
@@ -586,7 +885,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 /* Колонка прокручивается по вертикали, если карточек много */
 .kanban-scroll {
-  max-height: calc(100vh - 9rem);
+  max-height: calc(100vh - 12.9rem);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0.25rem;
@@ -668,5 +967,50 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 .kanban-chosen .card {
   box-shadow: var(--tblr-box-shadow-dropdown);
   border-color: var(--tblr-border-color);
+}
+
+/* ---------- табличный вид ---------- */
+.table-scroll {
+  overflow-x: auto;
+}
+.table-inner {
+  min-width: 60rem;
+}
+
+/* Общая сетка для заголовков и строк, чтобы столбцы совпадали во всех группах */
+.table-row-grid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) 10rem 8rem 12rem 7rem 6rem;
+  column-gap: 1rem;
+  align-items: start;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.group-header {
+  cursor: grab;
+  background-color: var(--tblr-bg-surface-secondary);
+  border-radius: var(--tblr-border-radius) var(--tblr-border-radius) 0 0;
+}
+.group-header:active {
+  cursor: grabbing;
+}
+
+/* Минимальная высота — чтобы можно было бросить строку в пустую группу */
+.table-body {
+  min-height: 2.5rem;
+}
+
+.table-row-item {
+  border-top: 1px solid var(--tblr-border-color);
+  cursor: grab;
+}
+.table-row-item:active {
+  cursor: grabbing;
+}
+.table-row-item:hover {
+  background-color: var(--tblr-bg-surface-secondary);
 }
 </style>
