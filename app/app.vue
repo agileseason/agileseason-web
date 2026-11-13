@@ -106,7 +106,7 @@ watch(() => route.fullPath, closeMenu)
 <template>
   <div class='page'>
     <header class='navbar navbar-expand-md d-print-none bg-primary1'>
-      <div class="container-fluid">
+      <div class='container-fluid'>
         <button
           ref='navbarToggler'
           class='navbar-toggler'
