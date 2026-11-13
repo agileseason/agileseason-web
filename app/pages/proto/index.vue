@@ -878,6 +878,8 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                   class='form-control'
                   placeholder='Название задачи'
                   autocomplete='off'
+                  @keydown.ctrl.enter.prevent='addCard'
+                  @keydown.meta.enter.prevent='addCard'
                 >
               </div>
               <div>
