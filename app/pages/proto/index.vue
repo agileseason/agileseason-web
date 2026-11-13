@@ -98,36 +98,55 @@ const PR_ICON = {
   closed: IconGitPullRequestClosed,
 }
 
-// ---------- добавление карточки ----------
+// ---------- добавление карточки (модальное окно) ----------
 let nextId = -1 // локальные (ещё не сохранённые) карточки имеют отрицательные id
-const addingTo = ref<number | null>(null)
+const addingTo = ref<number | null>(null) // id колонки, в которую создаём задачу; null — окно закрыто
 const newTitle = ref('')
+const newDescription = ref('')
+const newTitleInput = ref<HTMLInputElement | null>(null)
 
-function startAdd(columnId: number) {
+const addingColumn = computed(() => columns.value.find(c => c.id === addingTo.value) ?? null)
+
+async function startAdd(columnId: number) {
   addingTo.value = columnId
   newTitle.value = ''
+  newDescription.value = ''
+  await nextTick()
+  newTitleInput.value?.focus()
 }
 
 function cancelAdd() {
   addingTo.value = null
   newTitle.value = ''
+  newDescription.value = ''
 }
 
-function addCard(column: Column) {
+function addCard() {
+  const column = addingColumn.value
   const title = newTitle.value.trim()
-  if (!title) return
+  if (!column || !title) return
+  const description = newDescription.value.trim()
+
   // TODO: заменить на мутацию создания issue, id взять из ответа
   column.cards.unshift({
     id: nextId--,
     title,
+    description: description || undefined,
     labels: [],
     assignees: [],
     comments: 0,
     pullRequests: [],
     isClosed: false,
   })
+  column.collapsed = false // чтобы новая задача сразу была видна
   cancelAdd()
 }
+
+// блокируем прокрутку страницы под открытым модальным окном
+watch(addingTo, (value) => {
+  document.body.classList.toggle('modal-open', value !== null)
+})
+onBeforeUnmount(() => document.body.classList.remove('modal-open'))
 
 // ---------- добавление колонки ----------
 const isAddingColumn = ref(false)
@@ -378,25 +397,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
               </div>
 
               <div class='mb-4'>
-                <!-- Добавление карточки -->
-                <div v-if='addingTo === column.id' class='mb-3'>
-                  <input
-                    v-model='newTitle'
-                    type='text'
-                    class='form-control mb-2'
-                    placeholder='Название задачи'
-                    autofocus
-                    @keyup.enter='addCard(column)'
-                    @keyup.esc='cancelAdd'
-                  >
-                  <div class='d-flex gap-2'>
-                    <button class='btn btn-primary btn-sm' @click='addCard(column)'>Добавить</button>
-                    <button class='btn btn-ghost-secondary btn-sm btn-icon' aria-label='Отмена' @click='cancelAdd'>
-                      <IconX class='icon' />
-                    </button>
-                  </div>
-                </div>
-
                 <!-- Список карточек с вертикальной прокруткой (в Done их много) -->
                 <div class='kanban-scroll'>
                   <VueDraggable
@@ -683,25 +683,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                 </div>
 
                 <template v-if='!column.collapsed'>
-                  <!-- Добавление задачи -->
-                  <div v-if='addingTo === column.id' class='px-3 py-2 border-top'>
-                    <div class='d-flex gap-2'>
-                      <input
-                        v-model='newTitle'
-                        type='text'
-                        class='form-control form-control-sm'
-                        placeholder='Название задачи'
-                        autofocus
-                        @keyup.enter='addCard(column)'
-                        @keyup.esc='cancelAdd'
-                      >
-                      <button class='btn btn-primary btn-sm' @click='addCard(column)'>Добавить</button>
-                      <button class='btn btn-ghost-secondary btn-sm btn-icon' aria-label='Отмена' @click='cancelAdd'>
-                        <IconX class='icon' />
-                      </button>
-                    </div>
-                  </div>
-
                   <!-- Строки-задачи; group='cards' позволяет переносить их между колонками -->
                   <VueDraggable
                     v-model='column.cards'
@@ -864,6 +845,64 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
     </div>
   </div>
   <!-- END PAGE BODY -->
+
+  <!-- Модальное окно создания задачи -->
+  <Teleport to='body'>
+    <template v-if='addingColumn'>
+      <div
+        class='modal modal-blur d-block'
+        tabindex='-1'
+        role='dialog'
+        aria-modal='true'
+        aria-labelledby='new-issue-title'
+        @mousedown.self='cancelAdd'
+        @keyup.esc='cancelAdd'
+      >
+        <div class='modal-dialog modal-dialog-centered' role='document'>
+          <form class='modal-content' @submit.prevent='addCard'>
+            <div class='modal-header'>
+              <h5 id='new-issue-title' class='modal-title'>
+                Новая задача
+                <span class='text-secondary fw-normal'>· {{ addingColumn.title }}</span>
+              </h5>
+              <button type='button' class='btn-close' aria-label='Закрыть' @click='cancelAdd' />
+            </div>
+            <div class='modal-body'>
+              <div class='mb-3'>
+                <label class='form-label required' for='new-issue-title-input'>Название</label>
+                <input
+                  id='new-issue-title-input'
+                  ref='newTitleInput'
+                  v-model='newTitle'
+                  type='text'
+                  class='form-control'
+                  placeholder='Название задачи'
+                  autocomplete='off'
+                >
+              </div>
+              <div>
+                <label class='form-label' for='new-issue-description'>Описание</label>
+                <textarea
+                  id='new-issue-description'
+                  v-model='newDescription'
+                  class='form-control'
+                  rows='5'
+                  placeholder='Подробности задачи (необязательно)'
+                  @keydown.ctrl.enter.prevent='addCard'
+                  @keydown.meta.enter.prevent='addCard'
+                />
+              </div>
+            </div>
+            <div class='modal-footer'>
+              <button type='button' class='btn btn-link link-secondary me-auto' @click='cancelAdd'>Отмена</button>
+              <button type='submit' class='btn btn-primary' :disabled='!newTitle.trim()'>Создать</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class='modal-backdrop show' />
+    </template>
+  </Teleport>
 </template>
 
 <style scoped>
