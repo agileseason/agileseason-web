@@ -62,7 +62,7 @@ onMounted(() => {
 
 watch(view, (value) => {
   // при смене вида закрываем открытые формы, чтобы они не «зависли» скрытыми
-  cancelAdd()
+  closeIssueModal()
   cancelAddColumn()
   editingColumnId.value = null
   try {
@@ -98,53 +98,89 @@ const PR_ICON = {
   closed: IconGitPullRequestClosed,
 }
 
-// ---------- добавление карточки (модальное окно) ----------
+// ---------- создание и редактирование задачи (модальное окно) ----------
+type IssueModal =
+  | { mode: 'create', columnId: number }
+  | { mode: 'edit', card: Card }
+
 let nextId = -1 // локальные (ещё не сохранённые) карточки имеют отрицательные id
-const addingTo = ref<number | null>(null) // id колонки, в которую создаём задачу; null — окно закрыто
-const newTitle = ref('')
-const newDescription = ref('')
-const newTitleInput = ref<HTMLInputElement | null>(null)
+const issueModal = ref<IssueModal | null>(null) // null — окно закрыто
+const formTitle = ref('')
+const formDescription = ref('')
+const titleInputEl = ref<HTMLInputElement | null>(null)
 
-const addingColumn = computed(() => columns.value.find(c => c.id === addingTo.value) ?? null)
+// колонка, в которую создаём задачу (только в режиме создания)
+const modalColumn = computed(() => {
+  const modal = issueModal.value
+  if (modal?.mode !== 'create') return null
+  return columns.value.find(c => c.id === modal.columnId) ?? null
+})
 
-async function startAdd(columnId: number) {
-  addingTo.value = columnId
-  newTitle.value = ''
-  newDescription.value = ''
+// окно открыто, только если есть валидная цель (колонка существует)
+const isIssueModalOpen = computed(() => {
+  const modal = issueModal.value
+  if (!modal) return false
+  return modal.mode === 'edit' || !!modalColumn.value
+})
+
+async function focusTitle(select = false) {
   await nextTick()
-  newTitleInput.value?.focus()
+  titleInputEl.value?.focus()
+  if (select) titleInputEl.value?.select()
 }
 
-function cancelAdd() {
-  addingTo.value = null
-  newTitle.value = ''
-  newDescription.value = ''
+function startAdd(columnId: number) {
+  issueModal.value = { mode: 'create', columnId }
+  formTitle.value = ''
+  formDescription.value = ''
+  focusTitle()
 }
 
-function addCard() {
-  const column = addingColumn.value
-  const title = newTitle.value.trim()
-  if (!column || !title) return
-  const description = newDescription.value.trim()
+function openEdit(card: Card) {
+  issueModal.value = { mode: 'edit', card }
+  formTitle.value = card.title
+  formDescription.value = card.description ?? ''
+  focusTitle(true)
+}
 
-  // TODO: заменить на мутацию создания issue, id взять из ответа
-  column.cards.unshift({
-    id: nextId--,
-    title,
-    description: description || undefined,
-    labels: [],
-    assignees: [],
-    comments: 0,
-    pullRequests: [],
-    isClosed: false,
-  })
-  column.collapsed = false // чтобы новая задача сразу была видна
-  cancelAdd()
+function closeIssueModal() {
+  issueModal.value = null
+  formTitle.value = ''
+  formDescription.value = ''
+}
+
+function submitIssue() {
+  const modal = issueModal.value
+  const title = formTitle.value.trim()
+  if (!modal || !title) return
+  const description = formDescription.value.trim()
+
+  if (modal.mode === 'create') {
+    const column = modalColumn.value
+    if (!column) return
+    // TODO: заменить на мутацию создания issue, id взять из ответа
+    column.cards.unshift({
+      id: nextId--,
+      title,
+      description: description || undefined,
+      labels: [],
+      assignees: [],
+      comments: 0,
+      pullRequests: [],
+      isClosed: false,
+    })
+    column.collapsed = false // чтобы новая задача сразу была видна
+  } else {
+    // TODO: мутация updateIssue(card.id, { title, description }); при ошибке откатить изменения
+    modal.card.title = title
+    modal.card.description = description || undefined
+  }
+  closeIssueModal()
 }
 
 // блокируем прокрутку страницы под открытым модальным окном
-watch(addingTo, (value) => {
-  document.body.classList.toggle('modal-open', value !== null)
+watch(isIssueModalOpen, (open) => {
+  document.body.classList.toggle('modal-open', open)
 })
 onBeforeUnmount(() => document.body.classList.remove('modal-open'))
 
@@ -177,7 +213,6 @@ function addColumn() {
 // ---------- сворачивание колонки ----------
 function toggleCollapse(column: Column) {
   if (!column.collapsed) {
-    if (addingTo.value === column.id) cancelAdd()
     if (editingColumnId.value === column.id) editingColumnId.value = null
   }
   column.collapsed = !column.collapsed
@@ -410,7 +445,11 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     @update='onCardsChange(column, $event)'
                   >
                     <div v-for='card in column.cards' :key='card.id' class='kanban-card-wrapper col-12'>
-                      <div class='card card-sm kanban-card' :class='card.color && `bg-${card.color}-lt`'>
+                      <div
+                        class='card card-sm kanban-card'
+                        :class='card.color && `bg-${card.color}-lt`'
+                        @click='openEdit(card)'
+                      >
                         <div class='card-body'>
                           <div class='d-flex align-items-start gap-2'>
                             <h2 class='card-title mb-0 flex-fill'>{{ nbsp(card.title) }}</h2>
@@ -699,6 +738,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                       :key='card.id'
                       class='table-row-grid table-row-item px-3 py-2'
                       :class='card.color && `bg-${card.color}-lt`'
+                      @click='openEdit(card)'
                     >
                       <!-- Задача + метки -->
                       <div class='min-w-0'>
@@ -846,58 +886,68 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
   </div>
   <!-- END PAGE BODY -->
 
-  <!-- Модальное окно создания задачи -->
+  <!-- Модальное окно создания / редактирования задачи -->
   <Teleport to='body'>
-    <template v-if='addingColumn'>
+    <template v-if='isIssueModalOpen && issueModal'>
       <div
         class='modal modal-blur d-block'
         tabindex='-1'
         role='dialog'
         aria-modal='true'
-        aria-labelledby='new-issue-title'
-        @mousedown.self='cancelAdd'
-        @keyup.esc='cancelAdd'
+        aria-labelledby='issue-modal-title'
+        @mousedown.self='closeIssueModal'
+        @keyup.esc='closeIssueModal'
       >
         <div class='modal-dialog modal-dialog-centered' role='document'>
-          <form class='modal-content' @submit.prevent='addCard'>
+          <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
-              <h5 id='new-issue-title' class='modal-title'>
-                Новая задача
-                <span class='text-secondary fw-normal'>· {{ addingColumn.title }}</span>
+              <h5 id='issue-modal-title' class='modal-title'>
+                <template v-if='issueModal.mode === "create"'>
+                  Новая задача
+                  <span v-if='modalColumn' class='text-secondary fw-normal'>· {{ modalColumn.title }}</span>
+                </template>
+                <template v-else>
+                  Редактирование задачи
+                  <span v-if='issueModal.card.number' class='text-secondary fw-normal'>
+                    · #{{ issueModal.card.number }}
+                  </span>
+                </template>
               </h5>
-              <button type='button' class='btn-close' aria-label='Закрыть' @click='cancelAdd' />
+              <button type='button' class='btn-close' aria-label='Закрыть' @click='closeIssueModal' />
             </div>
             <div class='modal-body'>
               <div class='mb-3'>
-                <label class='form-label required' for='new-issue-title-input'>Название</label>
+                <label class='form-label required' for='issue-title-input'>Название</label>
                 <input
-                  id='new-issue-title-input'
-                  ref='newTitleInput'
-                  v-model='newTitle'
+                  id='issue-title-input'
+                  ref='titleInputEl'
+                  v-model='formTitle'
                   type='text'
                   class='form-control'
                   placeholder='Название задачи'
                   autocomplete='off'
-                  @keydown.ctrl.enter.prevent='addCard'
-                  @keydown.meta.enter.prevent='addCard'
+                  @keydown.ctrl.enter.prevent='submitIssue'
+                  @keydown.meta.enter.prevent='submitIssue'
                 >
               </div>
               <div>
-                <label class='form-label' for='new-issue-description'>Описание</label>
+                <label class='form-label' for='issue-description-input'>Описание</label>
                 <textarea
-                  id='new-issue-description'
-                  v-model='newDescription'
+                  id='issue-description-input'
+                  v-model='formDescription'
                   class='form-control'
                   rows='5'
                   placeholder='Подробности задачи (необязательно)'
-                  @keydown.ctrl.enter.prevent='addCard'
-                  @keydown.meta.enter.prevent='addCard'
+                  @keydown.ctrl.enter.prevent='submitIssue'
+                  @keydown.meta.enter.prevent='submitIssue'
                 />
               </div>
             </div>
             <div class='modal-footer'>
-              <button type='button' class='btn btn-link link-secondary me-auto' @click='cancelAdd'>Отмена</button>
-              <button type='submit' class='btn btn-primary' :disabled='!newTitle.trim()'>Создать</button>
+              <button type='button' class='btn btn-link link-secondary me-auto' @click='closeIssueModal'>Отмена</button>
+              <button type='submit' class='btn btn-primary' :disabled='!formTitle.trim()'>
+                {{ issueModal.mode === 'create' ? 'Создать' : 'Сохранить' }}
+              </button>
             </div>
           </form>
         </div>
