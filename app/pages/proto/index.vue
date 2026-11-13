@@ -898,7 +898,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         @mousedown.self='closeIssueModal'
         @keyup.esc='closeIssueModal'
       >
-        <div class='modal-dialog modal-dialog-centered' role='document'>
+        <div class='modal-dialog' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
               <h5 id='issue-modal-title' class='modal-title'>
