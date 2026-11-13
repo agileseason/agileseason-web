@@ -927,15 +927,18 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
 /* Колонка прокручивается по вертикали, если карточек много */
 .kanban-scroll {
-  max-height: calc(100vh - 12.9rem);
+  --kanban-scroll-height: calc(100vh - 12.9rem);
+  /* Колонка всегда занимает всю доступную высоту, чтобы карточку можно было бросить в любое её место */
+  height: var(--kanban-scroll-height);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0.25rem;
 }
 
-/* Минимальная высота нужна, чтобы можно было бросить карточку в пустую колонку */
+/* Список (он же зона drop) тянется на всю высоту колонки, даже если он пуст */
 .kanban-list {
-  min-height: 4rem;
+  min-height: calc(var(--kanban-scroll-height) - 0.5rem);
+  align-content: flex-start; /* карточки остаются сверху, а не растягиваются по высоте */
 }
 
 .kanban-card-wrapper {
