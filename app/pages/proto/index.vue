@@ -20,6 +20,8 @@ import {
   IconChevronRight,
 } from '@tabler/icons-vue'
 import { fetchBoard, moveIssue } from '~/api/board'
+import { fetchAssignableUsers } from '~/api/assignees'
+import type { AssignableUser } from '~/api/assignees'
 import { mapBoard } from '~/utils/board'
 import type { Card, Column } from '~/types/board'
 
@@ -30,6 +32,7 @@ const boardName = ref('Задачи')
 const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const loadError = ref('')
+const repositories = ref<{ id: number, name: string, fullName: string }[]>([])
 
 async function load() {
   isLoading.value = true
@@ -38,6 +41,7 @@ async function load() {
     const board = await fetchBoard(BOARD_ID)
     boardName.value = board.name
     columns.value = mapBoard(board)
+    repositories.value = board.repositories ?? []
   } catch (e) {
     console.error(e)
     loadError.value = 'Не удалось загрузить доску'
@@ -108,6 +112,71 @@ const issueModal = ref<IssueModal | null>(null) // null — окно закры�
 const formTitle = ref('')
 const formDescription = ref('')
 const titleInputEl = ref<HTMLInputElement | null>(null)
+const formAssignees = ref<string[]>([]) // логины выбранных исполнителей
+
+// ---- доступные исполнители ----
+const assignableUsers = ref<AssignableUser[]>([])
+const isAssigneesLoading = ref(false)
+const assigneesError = ref('')
+const assignableCache = new Map<string, AssignableUser[]>() // по repositoryFullName
+let assigneesRequestId = 0
+
+// репозиторий, для которого запрашиваем исполнителей
+const modalRepository = computed(() => {
+  const modal = issueModal.value
+  if (modal?.mode === 'edit') {
+    // TODO: заполнять card.repositoryFullName в mapBoard (ApiIssue.repositoryFullName)
+    return modal.card.repositoryFullName ?? repositories.value[0]?.fullName ?? null
+  }
+  // TODO: при создании нужен выбор репозитория; пока берём первый репозиторий доски
+  return repositories.value[0]?.fullName ?? null
+})
+
+async function loadAssignableUsers() {
+  const repository = modalRepository.value
+  const requestId = ++assigneesRequestId
+  assigneesError.value = ''
+  assignableUsers.value = []
+  isAssigneesLoading.value = false
+  if (!repository) return
+
+  const cached = assignableCache.get(repository)
+  if (cached) {
+    assignableUsers.value = cached
+    return
+  }
+
+  isAssigneesLoading.value = true
+  try {
+    const users = await fetchAssignableUsers(BOARD_ID, repository)
+    assignableCache.set(repository, users)
+    if (requestId === assigneesRequestId) assignableUsers.value = users
+  } catch (e) {
+    console.error(e)
+    if (requestId === assigneesRequestId) assigneesError.value = 'Не удалось загрузить пользователей'
+  } finally {
+    if (requestId === assigneesRequestId) isAssigneesLoading.value = false
+  }
+}
+
+// варианты для выбора: доступные пользователи + текущие исполнители, которых нет в списке
+const assigneeOptions = computed(() => {
+  const options = assignableUsers.value.map(u => ({ login: u.login, src: u.avatarUrl }))
+  const modal = issueModal.value
+  if (modal?.mode === 'edit') {
+    for (const a of modal.card.assignees) {
+      if (!options.some(o => o.login === a.name)) options.push({ login: a.name, src: a.src ?? '' })
+    }
+  }
+  return options
+})
+
+function selectedAssignees() {
+  return formAssignees.value.map((login) => {
+    const option = assigneeOptions.value.find(o => o.login === login)
+    return { name: login, src: option?.src || undefined }
+  })
+}
 
 // колонка, в которую создаём задачу (только в режиме создания)
 const modalColumn = computed(() => {
@@ -133,6 +202,8 @@ function startAdd(columnId: number) {
   issueModal.value = { mode: 'create', columnId }
   formTitle.value = ''
   formDescription.value = ''
+  formAssignees.value = []
+  loadAssignableUsers()
   focusTitle()
 }
 
@@ -140,6 +211,8 @@ function openEdit(card: Card) {
   issueModal.value = { mode: 'edit', card }
   formTitle.value = card.title
   formDescription.value = card.description ?? ''
+  formAssignees.value = card.assignees.map(a => a.name)
+  loadAssignableUsers()
   focusTitle(true)
 }
 
@@ -147,6 +220,9 @@ function closeIssueModal() {
   issueModal.value = null
   formTitle.value = ''
   formDescription.value = ''
+  formAssignees.value = []
+  assigneesRequestId++ // игнорируем ответ запроса, если окно уже закрыто
+  isAssigneesLoading.value = false
 }
 
 function submitIssue() {
@@ -164,16 +240,17 @@ function submitIssue() {
       title,
       description: description || undefined,
       labels: [],
-      assignees: [],
+      assignees: selectedAssignees(),
       comments: 0,
       pullRequests: [],
       isClosed: false,
     })
     column.collapsed = false // чтобы новая задача сразу была видна
   } else {
-    // TODO: мутация updateIssue(card.id, { title, description }); при ошибке откатить изменения
+    // TODO: мутация updateIssue(card.id, { title, description, assignees }); при ошибке откатить изменения
     modal.card.title = title
     modal.card.description = description || undefined
+    modal.card.assignees = selectedAssignees()
   }
   closeIssueModal()
 }
@@ -898,7 +975,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         @mousedown.self='closeIssueModal'
         @keyup.esc='closeIssueModal'
       >
-        <div class='modal-dialog' role='document'>
+        <div class='modal-dialog modal-xl' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
               <h5 id='issue-modal-title' class='modal-title'>
@@ -916,31 +993,70 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
               <button type='button' class='btn-close' aria-label='Закрыть' @click='closeIssueModal' />
             </div>
             <div class='modal-body'>
-              <div class='mb-3'>
-                <label class='form-label required' for='issue-title-input'>Название</label>
-                <input
-                  id='issue-title-input'
-                  ref='titleInputEl'
-                  v-model='formTitle'
-                  type='text'
-                  class='form-control'
-                  placeholder='Название задачи'
-                  autocomplete='off'
-                  @keydown.ctrl.enter.prevent='submitIssue'
-                  @keydown.meta.enter.prevent='submitIssue'
-                >
-              </div>
-              <div>
-                <label class='form-label' for='issue-description-input'>Описание</label>
-                <textarea
-                  id='issue-description-input'
-                  v-model='formDescription'
-                  class='form-control'
-                  rows='5'
-                  placeholder='Подробности задачи (необязательно)'
-                  @keydown.ctrl.enter.prevent='submitIssue'
-                  @keydown.meta.enter.prevent='submitIssue'
-                />
+              <div class='row g-4'>
+                <div class='col-md-9'>
+                  <div class='mb-3'>
+                    <label class='form-label required' for='issue-title-input'>Название</label>
+                    <input
+                      id='issue-title-input'
+                      ref='titleInputEl'
+                      v-model='formTitle'
+                      type='text'
+                      class='form-control'
+                      placeholder='Название задачи'
+                      autocomplete='off'
+                      @keydown.ctrl.enter.prevent='submitIssue'
+                      @keydown.meta.enter.prevent='submitIssue'
+                    >
+                  </div>
+                  <div>
+                    <label class='form-label' for='issue-description-input'>Описание</label>
+                    <textarea
+                      id='issue-description-input'
+                      v-model='formDescription'
+                      class='form-control'
+                      rows='5'
+                      placeholder='Подробности задачи (необязательно)'
+                      @keydown.ctrl.enter.prevent='submitIssue'
+                      @keydown.meta.enter.prevent='submitIssue'
+                    />
+                  </div>
+                </div>
+                <div class='col-md-3'>
+                  <div>
+                    <label class='form-label'>Исполнители</label>
+                    <div v-if='isAssigneesLoading' class='text-secondary small'>
+                      <span class='spinner-border spinner-border-sm me-2' />Загрузка пользователей…
+                    </div>
+                    <div v-else-if='assigneesError' class='text-danger small'>
+                      {{ assigneesError }}
+                      <a href='#' class='ms-1' @click.prevent='loadAssignableUsers'>Повторить</a>
+                    </div>
+                    <div v-else-if='!assigneeOptions.length' class='text-secondary small'>
+                      Нет доступных пользователей
+                    </div>
+                    <div v-else class='form-selectgroup flex-column align-items-stretch'>
+                      <label v-for='user in assigneeOptions' :key='user.login' class='form-selectgroup-item'>
+                        <input
+                          v-model='formAssignees'
+                          type='checkbox'
+                          name='assignees'
+                          :value='user.login'
+                          class='form-selectgroup-input'
+                        >
+                        <span class='form-selectgroup-label d-flex align-items-center'>
+                          <span
+                            class='avatar avatar-xs me-2'
+                            :style='user.src ? { backgroundImage: `url(${user.src})` } : undefined'
+                          >
+                            <template v-if='!user.src'>{{ initials(user.login) }}</template>
+                          </span>
+                          {{ user.login }}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class='modal-footer'>

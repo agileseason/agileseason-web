@@ -110,6 +110,7 @@ export interface Card {
   id: number
   number?: number
   repositoryName?: string
+  repositoryFullName?: string // owner/name, нужен для запроса доступных исполнителей
   title: string
   description?: string
   color?: CardColor // заливка всей карточки (bg-COLOR-lt)
