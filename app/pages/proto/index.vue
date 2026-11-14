@@ -19,12 +19,12 @@ import {
   IconChevronDown,
   IconChevronRight,
 } from '@tabler/icons-vue'
-import { fetchBoard, moveIssue } from '~/api/board'
+import { fetchBoard, moveIssue, createIssue } from '~/api/board'
 import { fetchAssignableUsers } from '~/api/assignees'
 import type { AssignableUser } from '~/api/assignees'
 import { fetchLabels } from '~/api/labels'
 import type { GithubLabel } from '~/api/labels'
-import { mapBoard } from '~/utils/board'
+import { mapBoard, mapIssue } from '~/utils/board'
 import type { Card, CardLabel, Column } from '~/types/board'
 
 const BOARD_ID = 42
@@ -116,6 +116,9 @@ const formDescription = ref('')
 const titleInputEl = ref<HTMLInputElement | null>(null)
 const formAssignees = ref<string[]>([]) // логины выбранных исполнителей
 const formLabels = ref<string[]>([]) // названия выбранных меток
+const formRepository = ref<string | null>(null) // fullName выбранного репозитория (только при создании)
+const isSubmitting = ref(false)
+const submitError = ref('')
 
 // ---- справочники репозитория (исполнители, метки) ----
 // Загружает список для репозитория, кэширует по repositoryFullName и игнорирует устаревшие ответы
@@ -167,12 +170,14 @@ function useRepositoryList<T>(
 // репозиторий, для которого запрашиваем справочники
 const modalRepository = computed(() => {
   const modal = issueModal.value
-  if (modal?.mode === 'edit') {
-    // TODO: заполнять card.repositoryFullName в mapBoard (ApiIssue.repositoryFullName)
-    return modal.card.repositoryFullName ?? repositories.value[0]?.fullName ?? null
+  if (!modal) return null
+  if (modal.mode === 'edit') {
+    // репозиторий существующей задачи не меняется;
+    // запасной вариант — если на доске всего один репозиторий
+    return modal.card.repositoryFullName
+      ?? (repositories.value.length === 1 ? repositories.value[0].fullName : null)
   }
-  // TODO: при создании нужен выбор репозитория; пока берём первый репозиторий доски
-  return repositories.value[0]?.fullName ?? null
+  return formRepository.value // при создании — выбор пользователя
 })
 
 const {
@@ -193,6 +198,18 @@ const {
 
 const loadAssignableUsers = () => loadAssigneesFor(modalRepository.value)
 const loadLabels = () => loadLabelsFor(modalRepository.value)
+
+// исполнители и метки специфичны для репозитория: при смене выбора (создание) сбрасываем их
+watch(formRepository, () => {
+  formAssignees.value = []
+  formLabels.value = []
+})
+
+// справочники грузим при каждой смене репозитория в окне
+watch(modalRepository, () => {
+  loadAssignableUsers()
+  loadLabels()
+})
 
 // варианты для выбора: доступные пользователи + текущие исполнители, которых нет в списке
 const assigneeOptions = computed(() => {
@@ -252,6 +269,10 @@ const modalColumn = computed(() => {
   return columns.value.find(c => c.id === modal.columnId) ?? null
 })
 
+// при создании репозиторий обязателен
+const isRepositoryMissing = computed(() => issueModal.value?.mode === 'create' && !formRepository.value)
+const canSubmit = computed(() => !!formTitle.value.trim() && !isRepositoryMissing.value && !isSubmitting.value)
+
 // окно открыто, только если есть валидная цель (колонка существует)
 const isIssueModalOpen = computed(() => {
   const modal = issueModal.value
@@ -271,24 +292,27 @@ function startAdd(columnId: number) {
   formDescription.value = ''
   formAssignees.value = []
   formLabels.value = []
-  loadAssignableUsers()
-  loadLabels()
+  submitError.value = ''
+  // единственный репозиторий выбираем сразу, при нескольких пользователь выбирает сам
+  formRepository.value = repositories.value.length === 1 ? repositories.value[0].fullName : null
   focusTitle()
 }
 
 function openEdit(card: Card) {
   issueModal.value = { mode: 'edit', card }
+  formRepository.value = null
+  submitError.value = ''
   formTitle.value = card.title
   formDescription.value = card.description ?? ''
   formAssignees.value = card.assignees.map(a => a.name)
   formLabels.value = card.labels.map(l => l.name)
-  loadAssignableUsers()
-  loadLabels()
   focusTitle(true)
 }
 
 function closeIssueModal() {
   issueModal.value = null
+  formRepository.value = null
+  submitError.value = ''
   formTitle.value = ''
   formDescription.value = ''
   formAssignees.value = []
@@ -297,27 +321,41 @@ function closeIssueModal() {
   cancelLabels()
 }
 
-function submitIssue() {
+async function submitIssue() {
   const modal = issueModal.value
   const title = formTitle.value.trim()
-  if (!modal || !title) return
+  if (!modal || !title || !canSubmit.value) return
   const description = formDescription.value.trim()
 
   if (modal.mode === 'create') {
     const column = modalColumn.value
-    if (!column) return
-    // TODO: заменить на мутацию создания issue, id взять из ответа
-    column.cards.unshift({
-      id: nextId--,
-      title,
-      description: description || undefined,
-      labels: selectedLabels(),
-      assignees: selectedAssignees(),
-      comments: 0,
-      pullRequests: [],
-      isClosed: false,
-    })
-    column.collapsed = false // чтобы новая задача сразу была видна
+    const repositoryFullName = formRepository.value
+    if (!column || !repositoryFullName) return
+    const repository = repositories.value.find(r => r.fullName === repositoryFullName)
+    if (!repository) return
+
+    isSubmitting.value = true
+    submitError.value = ''
+    try {
+      const issue = await createIssue({
+        boardId: BOARD_ID,
+        columnId: column.id,
+        repositoryId: repository.id, // выбранный репозиторий
+        title,
+        body: description,
+        position: 'top',
+        assignees: formAssignees.value,
+        labels: formLabels.value,
+      })
+      column.cards.unshift(mapIssue(issue))
+      column.collapsed = false // чтобы новая задача сразу была видна
+    } catch (e) {
+      console.error(e)
+      submitError.value = 'Не удалось создать задачу'
+      return
+    } finally {
+      isSubmitting.value = false
+    }
   } else {
     // TODO: мутация updateIssue(card.id, { title, description, assignees, labels }); при ошибке откатить изменения
     modal.card.title = title
@@ -1066,8 +1104,34 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
               <button type='button' class='btn-close' aria-label='Закрыть' @click='closeIssueModal' />
             </div>
             <div class='modal-body'>
+              <div v-if='submitError' class='alert alert-danger' role='alert'>{{ submitError }}</div>
               <div class='row g-4'>
                 <div class='col-md-9'>
+                  <div class='mb-3'>
+                    <label class='form-label' :class='{ required: issueModal.mode === "create" }'>Репозиторий</label>
+                    <template v-if='issueModal.mode === "create"'>
+                      <div v-if='!repositories.length' class='text-danger small'>
+                        К доске не подключено ни одного репозитория
+                      </div>
+                      <div v-else class='form-selectgroup'>
+                        <label v-for='repo in repositories' :key='repo.id' class='form-selectgroup-item'>
+                          <input
+                            v-model='formRepository'
+                            type='radio'
+                            name='repository'
+                            :value='repo.fullName'
+                            class='form-selectgroup-input'
+                          >
+                          <span class='form-selectgroup-label'>{{ repo.fullName }}</span>
+                        </label>
+                      </div>
+                    </template>
+                    <div v-else>
+                      <span class='badge bg-secondary-lt'>
+                        {{ issueModal.card.repositoryFullName ?? issueModal.card.repositoryName ?? modalRepository }}
+                      </span>
+                    </div>
+                  </div>
                   <div class='mb-3'>
                     <label class='form-label required' for='issue-title-input'>Название</label>
                     <input
@@ -1098,7 +1162,8 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                 <div class='col-md-3'>
                   <div>
                     <label class='form-label'>Исполнители</label>
-                    <div v-if='isAssigneesLoading' class='text-secondary small'>
+                    <div v-if='isRepositoryMissing' class='text-secondary small'>Сначала выберите репозиторий</div>
+                    <div v-else-if='isAssigneesLoading' class='text-secondary small'>
                       <span class='spinner-border spinner-border-sm me-2' />Загрузка пользователей…
                     </div>
                     <div v-else-if='assigneesError' class='text-danger small'>
@@ -1131,7 +1196,8 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                   </div>
                   <div class='mt-4'>
                     <label class='form-label'>Метки</label>
-                    <div v-if='isLabelsLoading' class='text-secondary small'>
+                    <div v-if='isRepositoryMissing' class='text-secondary small'>Сначала выберите репозиторий</div>
+                    <div v-else-if='isLabelsLoading' class='text-secondary small'>
                       <span class='spinner-border spinner-border-sm me-2' />Загрузка меток…
                     </div>
                     <div v-else-if='labelsError' class='text-danger small'>
@@ -1168,7 +1234,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
             </div>
             <div class='modal-footer'>
               <button type='button' class='btn btn-link link-secondary me-auto' @click='closeIssueModal'>Отмена</button>
-              <button type='submit' class='btn btn-primary' :disabled='!formTitle.trim()'>
+              <button type='submit' class='btn btn-primary' :disabled='!canSubmit'>
                 {{ issueModal.mode === 'create' ? 'Создать' : 'Сохранить' }}
               </button>
             </div>

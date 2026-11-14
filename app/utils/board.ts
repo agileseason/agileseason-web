@@ -62,6 +62,7 @@ export function mapIssue(issue: ApiIssue): Card {
     id: issue.id,
     number: issue.number,
     repositoryName: issue.repositoryName,
+    repositoryFullName: issue.repositoryFullName,
     title: issue.title,
     description: makeDescription(issue.body),
     color: pickColor(issue.color),
