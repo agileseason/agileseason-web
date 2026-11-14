@@ -1048,7 +1048,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         @mousedown.self='closeIssueModal'
         @keyup.esc='closeIssueModal'
       >
-        <div class='modal-dialog modal-lg' role='document'>
+        <div class='modal-dialog modal-xl' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
               <h5 id='issue-modal-title' class='modal-title'>
@@ -1067,7 +1067,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
             </div>
             <div class='modal-body'>
               <div class='row g-4'>
-                <div class='col-md-8'>
+                <div class='col-md-9'>
                   <div class='mb-3'>
                     <label class='form-label required' for='issue-title-input'>Название</label>
                     <input
@@ -1095,7 +1095,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     />
                   </div>
                 </div>
-                <div class='col-md-4'>
+                <div class='col-md-3'>
                   <div>
                     <label class='form-label'>Исполнители</label>
                     <div v-if='isAssigneesLoading' class='text-secondary small'>
@@ -1108,7 +1108,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     <div v-else-if='!assigneeOptions.length' class='text-secondary small'>
                       Нет доступных пользователей
                     </div>
-                    <div v-else class='form-selectgroup flex-column align-items-stretch'>
+                    <div v-else class='form-selectgroup d-flex flex-column align-items-stretch'>
                       <label v-for='user in assigneeOptions' :key='user.login' class='form-selectgroup-item'>
                         <input
                           v-model='formAssignees'
@@ -1141,7 +1141,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     <div v-else-if='!labelOptions.length' class='text-secondary small'>
                       Нет доступных меток
                     </div>
-                    <div v-else class='form-selectgroup'>
+                    <div v-else class='form-selectgroup d-flex flex-column'>
                       <label v-for='label in labelOptions' :key='label.name' class='form-selectgroup-item'>
                         <input
                           v-model='formLabels'
