@@ -1157,7 +1157,10 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                             :value='repo.fullName'
                             class='form-selectgroup-input'
                           >
-                          <span class='form-selectgroup-label'>{{ repo.fullName }}</span>
+                          <span class='form-selectgroup-label d-flex align-items-center'>
+                            <span class='me-2 d-flex'><span class='form-selectgroup-check' /></span>
+                            <span class='text-break'>{{ repo.fullName }}</span>
+                          </span>
                         </label>
                       </div>
                     </template>
