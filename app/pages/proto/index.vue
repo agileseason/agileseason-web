@@ -25,7 +25,8 @@ import type { AssignableUser } from '~/api/assignees'
 import { fetchLabels } from '~/api/labels'
 import type { GithubLabel } from '~/api/labels'
 import { mapBoard, mapIssue } from '~/utils/board'
-import type { Card, CardLabel, Column } from '~/types/board'
+import { CARD_COLORS } from '~/types/board'
+import type { Card, CardColor, CardLabel, Column } from '~/types/board'
 
 const BOARD_ID = 42
 
@@ -117,6 +118,7 @@ const titleInputEl = ref<HTMLInputElement | null>(null)
 const formAssignees = ref<string[]>([]) // логины выбранных исполнителей
 const formLabels = ref<string[]>([]) // названия выбранных меток
 const formRepository = ref<string | null>(null) // fullName выбранного репозитория (только при создании)
+const formColor = ref<CardColor | null>(null) // цвет заливки карточки, null — без цвета
 const isSubmitting = ref(false)
 const submitError = ref('')
 
@@ -293,6 +295,7 @@ function startAdd(columnId: number) {
   formAssignees.value = []
   formLabels.value = []
   submitError.value = ''
+  formColor.value = null
   // единственный репозиторий выбираем сразу, при нескольких пользователь выбирает сам
   formRepository.value = repositories.value.length === 1 ? repositories.value[0].fullName : null
   focusTitle()
@@ -303,6 +306,7 @@ function openEdit(card: Card) {
   formRepository.value = null
   submitError.value = ''
   formTitle.value = card.title
+  formColor.value = card.color ?? null
   formDescription.value = card.description ?? ''
   formAssignees.value = card.assignees.map(a => a.name)
   formLabels.value = card.labels.map(l => l.name)
@@ -312,6 +316,7 @@ function openEdit(card: Card) {
 function closeIssueModal() {
   issueModal.value = null
   formRepository.value = null
+  formColor.value = null
   submitError.value = ''
   formTitle.value = ''
   formDescription.value = ''
@@ -346,6 +351,7 @@ async function submitIssue() {
         position: 'top',
         assignees: formAssignees.value,
         labels: formLabels.value,
+        color: formColor.value ?? undefined,
       })
       column.cards.unshift(mapIssue(issue))
       column.collapsed = false // чтобы новая задача сразу была видна
@@ -362,6 +368,7 @@ async function submitIssue() {
     modal.card.description = description || undefined
     modal.card.assignees = selectedAssignees()
     modal.card.labels = selectedLabels()
+    modal.card.color = formColor.value ?? undefined // TODO: передать color в updateIssue
   }
   closeIssueModal()
 }
@@ -1108,31 +1115,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
               <div class='row g-4'>
                 <div class='col-md-9'>
                   <div class='mb-3'>
-                    <label class='form-label' :class='{ required: issueModal.mode === "create" }'>Репозиторий</label>
-                    <template v-if='issueModal.mode === "create"'>
-                      <div v-if='!repositories.length' class='text-danger small'>
-                        К доске не подключено ни одного репозитория
-                      </div>
-                      <div v-else class='form-selectgroup'>
-                        <label v-for='repo in repositories' :key='repo.id' class='form-selectgroup-item'>
-                          <input
-                            v-model='formRepository'
-                            type='radio'
-                            name='repository'
-                            :value='repo.fullName'
-                            class='form-selectgroup-input'
-                          >
-                          <span class='form-selectgroup-label'>{{ repo.fullName }}</span>
-                        </label>
-                      </div>
-                    </template>
-                    <div v-else>
-                      <span class='badge bg-secondary-lt'>
-                        {{ issueModal.card.repositoryFullName ?? issueModal.card.repositoryName ?? modalRepository }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class='mb-3'>
                     <label class='form-label required' for='issue-title-input'>Название</label>
                     <input
                       id='issue-title-input'
@@ -1160,6 +1142,31 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                   </div>
                 </div>
                 <div class='col-md-3'>
+                  <div class='mb-4'>
+                    <label class='form-label' :class='{ required: issueModal.mode === "create" }'>Репозиторий</label>
+                    <template v-if='issueModal.mode === "create"'>
+                      <div v-if='!repositories.length' class='text-danger small'>
+                        К доске не подключено ни одного репозитория
+                      </div>
+                      <div v-else class='form-selectgroup d-flex flex-column align-items-stretch'>
+                        <label v-for='repo in repositories' :key='repo.id' class='form-selectgroup-item'>
+                          <input
+                            v-model='formRepository'
+                            type='radio'
+                            name='repository'
+                            :value='repo.fullName'
+                            class='form-selectgroup-input'
+                          >
+                          <span class='form-selectgroup-label'>{{ repo.fullName }}</span>
+                        </label>
+                      </div>
+                    </template>
+                    <div v-else>
+                      <span class='badge bg-secondary-lt'>
+                        {{ issueModal.card.repositoryFullName ?? issueModal.card.repositoryName ?? modalRepository }}
+                      </span>
+                    </div>
+                  </div>
                   <div>
                     <label class='form-label'>Исполнители</label>
                     <div v-if='isRepositoryMissing' class='text-secondary small'>Сначала выберите репозиторий</div>
@@ -1227,6 +1234,25 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                           {{ label.name }}
                         </span>
                       </label>
+                    </div>
+                  </div>
+                  <div class='mt-4'>
+                    <label class='form-label'>Цвет</label>
+                    <div class='row g-2'>
+                      <div v-for='color in CARD_COLORS' :key='color' class='col-auto'>
+                        <label class='form-colorinput' :title='color'>
+                          <!-- повторный клик по выбранному цвету сбрасывает его -->
+                          <input
+                            type='radio'
+                            name='color'
+                            :value='color'
+                            :checked='formColor === color'
+                            class='form-colorinput-input'
+                            @click='formColor = formColor === color ? null : color'
+                          >
+                          <span class='form-colorinput-color' :class='`bg-${color}`' />
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
