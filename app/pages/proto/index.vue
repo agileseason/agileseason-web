@@ -22,8 +22,10 @@ import {
 import { fetchBoard, moveIssue } from '~/api/board'
 import { fetchAssignableUsers } from '~/api/assignees'
 import type { AssignableUser } from '~/api/assignees'
+import { fetchLabels } from '~/api/labels'
+import type { GithubLabel } from '~/api/labels'
 import { mapBoard } from '~/utils/board'
-import type { Card, Column } from '~/types/board'
+import type { Card, CardLabel, Column } from '~/types/board'
 
 const BOARD_ID = 42
 
@@ -113,15 +115,56 @@ const formTitle = ref('')
 const formDescription = ref('')
 const titleInputEl = ref<HTMLInputElement | null>(null)
 const formAssignees = ref<string[]>([]) // логины выбранных исполнителей
+const formLabels = ref<string[]>([]) // названия выбранных меток
 
-// ---- доступные исполнители ----
-const assignableUsers = ref<AssignableUser[]>([])
-const isAssigneesLoading = ref(false)
-const assigneesError = ref('')
-const assignableCache = new Map<string, AssignableUser[]>() // по repositoryFullName
-let assigneesRequestId = 0
+// ---- справочники репозитория (исполнители, метки) ----
+// Загружает список для репозитория, кэширует по repositoryFullName и игнорирует устаревшие ответы
+function useRepositoryList<T>(
+  fetcher: (boardId: number, repositoryFullName: string) => Promise<T[]>,
+  errorMessage: string,
+) {
+  const items = shallowRef<T[]>([])
+  const isLoading = ref(false)
+  const error = ref('')
+  const cache = new Map<string, T[]>()
+  let requestId = 0
 
-// репозиторий, для которого запрашиваем исполнителей
+  async function load(repository: string | null) {
+    const id = ++requestId
+    error.value = ''
+    items.value = []
+    isLoading.value = false
+    if (!repository) return
+
+    const cached = cache.get(repository)
+    if (cached) {
+      items.value = cached
+      return
+    }
+
+    isLoading.value = true
+    try {
+      const result = await fetcher(BOARD_ID, repository)
+      cache.set(repository, result)
+      if (id === requestId) items.value = result
+    } catch (e) {
+      console.error(e)
+      if (id === requestId) error.value = errorMessage
+    } finally {
+      if (id === requestId) isLoading.value = false
+    }
+  }
+
+  // игнорируем ответ запроса, если окно уже закрыто
+  function cancel() {
+    requestId++
+    isLoading.value = false
+  }
+
+  return { items, isLoading, error, load, cancel }
+}
+
+// репозиторий, для которого запрашиваем справочники
 const modalRepository = computed(() => {
   const modal = issueModal.value
   if (modal?.mode === 'edit') {
@@ -132,32 +175,24 @@ const modalRepository = computed(() => {
   return repositories.value[0]?.fullName ?? null
 })
 
-async function loadAssignableUsers() {
-  const repository = modalRepository.value
-  const requestId = ++assigneesRequestId
-  assigneesError.value = ''
-  assignableUsers.value = []
-  isAssigneesLoading.value = false
-  if (!repository) return
+const {
+  items: assignableUsers,
+  isLoading: isAssigneesLoading,
+  error: assigneesError,
+  load: loadAssigneesFor,
+  cancel: cancelAssignees,
+} = useRepositoryList<AssignableUser>(fetchAssignableUsers, 'Не удалось загрузить пользователей')
 
-  const cached = assignableCache.get(repository)
-  if (cached) {
-    assignableUsers.value = cached
-    return
-  }
+const {
+  items: githubLabels,
+  isLoading: isLabelsLoading,
+  error: labelsError,
+  load: loadLabelsFor,
+  cancel: cancelLabels,
+} = useRepositoryList<GithubLabel>(fetchLabels, 'Не удалось загрузить метки')
 
-  isAssigneesLoading.value = true
-  try {
-    const users = await fetchAssignableUsers(BOARD_ID, repository)
-    assignableCache.set(repository, users)
-    if (requestId === assigneesRequestId) assignableUsers.value = users
-  } catch (e) {
-    console.error(e)
-    if (requestId === assigneesRequestId) assigneesError.value = 'Не удалось загрузить пользователей'
-  } finally {
-    if (requestId === assigneesRequestId) isAssigneesLoading.value = false
-  }
-}
+const loadAssignableUsers = () => loadAssigneesFor(modalRepository.value)
+const loadLabels = () => loadLabelsFor(modalRepository.value)
 
 // варианты для выбора: доступные пользователи + текущие исполнители, которых нет в списке
 const assigneeOptions = computed(() => {
@@ -175,6 +210,38 @@ function selectedAssignees() {
   return formAssignees.value.map((login) => {
     const option = assigneeOptions.value.find(o => o.login === login)
     return { name: login, src: option?.src || undefined }
+  })
+}
+
+// цвет текста на заливке метки: тёмный или светлый в зависимости от яркости фона
+function labelTextColor(hex: string) {
+  const value = hex.replace('#', '')
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#000000' : '#ffffff'
+}
+
+// варианты меток: доступные в репозитории + текущие метки карточки, которых нет в списке
+const labelOptions = computed(() => {
+  const result: (CardLabel & { description: string })[] = []
+  for (const l of githubLabels.value) {
+    const color = `#${l.color.replace('#', '')}`
+    result.push({ name: l.name, color, textColor: labelTextColor(color), description: l.description })
+  }
+  const modal = issueModal.value
+  if (modal?.mode === 'edit') {
+    for (const l of modal.card.labels) {
+      if (!result.some(o => o.name === l.name)) result.push({ ...l, description: '' })
+    }
+  }
+  return result
+})
+
+function selectedLabels(): CardLabel[] {
+  return formLabels.value.flatMap((name) => {
+    const option = labelOptions.value.find(o => o.name === name)
+    return option ? [{ name: option.name, color: option.color, textColor: option.textColor }] : []
   })
 }
 
@@ -203,7 +270,9 @@ function startAdd(columnId: number) {
   formTitle.value = ''
   formDescription.value = ''
   formAssignees.value = []
+  formLabels.value = []
   loadAssignableUsers()
+  loadLabels()
   focusTitle()
 }
 
@@ -212,7 +281,9 @@ function openEdit(card: Card) {
   formTitle.value = card.title
   formDescription.value = card.description ?? ''
   formAssignees.value = card.assignees.map(a => a.name)
+  formLabels.value = card.labels.map(l => l.name)
   loadAssignableUsers()
+  loadLabels()
   focusTitle(true)
 }
 
@@ -221,8 +292,9 @@ function closeIssueModal() {
   formTitle.value = ''
   formDescription.value = ''
   formAssignees.value = []
-  assigneesRequestId++ // игнорируем ответ запроса, если окно уже закрыто
-  isAssigneesLoading.value = false
+  formLabels.value = []
+  cancelAssignees()
+  cancelLabels()
 }
 
 function submitIssue() {
@@ -239,7 +311,7 @@ function submitIssue() {
       id: nextId--,
       title,
       description: description || undefined,
-      labels: [],
+      labels: selectedLabels(),
       assignees: selectedAssignees(),
       comments: 0,
       pullRequests: [],
@@ -247,10 +319,11 @@ function submitIssue() {
     })
     column.collapsed = false // чтобы новая задача сразу была видна
   } else {
-    // TODO: мутация updateIssue(card.id, { title, description, assignees }); при ошибке откатить изменения
+    // TODO: мутация updateIssue(card.id, { title, description, assignees, labels }); при ошибке откатить изменения
     modal.card.title = title
     modal.card.description = description || undefined
     modal.card.assignees = selectedAssignees()
+    modal.card.labels = selectedLabels()
   }
   closeIssueModal()
 }
@@ -975,7 +1048,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         @mousedown.self='closeIssueModal'
         @keyup.esc='closeIssueModal'
       >
-        <div class='modal-dialog modal-xl' role='document'>
+        <div class='modal-dialog modal-lg' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
               <h5 id='issue-modal-title' class='modal-title'>
@@ -994,7 +1067,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
             </div>
             <div class='modal-body'>
               <div class='row g-4'>
-                <div class='col-md-9'>
+                <div class='col-md-8'>
                   <div class='mb-3'>
                     <label class='form-label required' for='issue-title-input'>Название</label>
                     <input
@@ -1022,7 +1095,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                     />
                   </div>
                 </div>
-                <div class='col-md-3'>
+                <div class='col-md-4'>
                   <div>
                     <label class='form-label'>Исполнители</label>
                     <div v-if='isAssigneesLoading' class='text-secondary small'>
@@ -1052,6 +1125,40 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                             <template v-if='!user.src'>{{ initials(user.login) }}</template>
                           </span>
                           {{ user.login }}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class='mt-4'>
+                    <label class='form-label'>Метки</label>
+                    <div v-if='isLabelsLoading' class='text-secondary small'>
+                      <span class='spinner-border spinner-border-sm me-2' />Загрузка меток…
+                    </div>
+                    <div v-else-if='labelsError' class='text-danger small'>
+                      {{ labelsError }}
+                      <a href='#' class='ms-1' @click.prevent='loadLabels'>Повторить</a>
+                    </div>
+                    <div v-else-if='!labelOptions.length' class='text-secondary small'>
+                      Нет доступных меток
+                    </div>
+                    <div v-else class='form-selectgroup'>
+                      <label v-for='label in labelOptions' :key='label.name' class='form-selectgroup-item'>
+                        <input
+                          v-model='formLabels'
+                          type='checkbox'
+                          name='labels'
+                          :value='label.name'
+                          class='form-selectgroup-input'
+                        >
+                        <span
+                          class='form-selectgroup-label d-flex align-items-center'
+                          :title='label.description || undefined'
+                        >
+                          <span
+                            class='me-2 flex-shrink-0 rounded-circle border'
+                            :style='{ width: "0.75rem", height: "0.75rem", backgroundColor: label.color }'
+                          />
+                          {{ label.name }}
                         </span>
                       </label>
                     </div>
