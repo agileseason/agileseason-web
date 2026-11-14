@@ -1,4 +1,6 @@
 import boardMock from '~/mocks/board.json'
+import { fetchAssignableUsers } from '~/api/assignees'
+import { fetchLabels } from '~/api/labels'
 import type { ApiBoard, ApiIssue, BoardResponse } from '~/types/board'
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -98,13 +100,25 @@ export async function createIssue(params: CreateIssueParams): Promise<ApiIssue> 
   const number = id % 100000
   const fullName = repository?.fullName ?? ''
 
+  // как сервер: цвета меток и аватарки находим в справочниках репозитория
+  const [labelCatalog, userCatalog] = await Promise.all([
+    fetchLabels(params.boardId, fullName).catch(() => []),
+    fetchAssignableUsers(params.boardId, fullName).catch(() => []),
+  ])
+
   return {
     id,
     number,
     title: params.title,
     body: params.body ?? '',
-    labels: (params.labels ?? []).map(name => ({ name, color: 'cccccc' })),
-    assignees: (params.assignees ?? []).map(login => ({ login })),
+    labels: (params.labels ?? []).map((name) => {
+      const found = labelCatalog.find(l => l.name === name)
+      return { name, color: (found?.color ?? 'cccccc').replace('#', '') } // без '#', как в API
+    }),
+    assignees: (params.assignees ?? []).map((login) => {
+      const found = userCatalog.find(u => u.login === login)
+      return { login, url: `https://github.com/${login}`, avatarUrl: found?.avatarUrl }
+    }),
     color: params.color ?? null,
     isBody: !!params.body,
     isClosed: false,
