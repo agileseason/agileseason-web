@@ -92,6 +92,11 @@ export const httpApi: BoardApi = {
     throw new Error('moveIssue: мутация перемещения ещё не реализована на бэкенде')
   },
 
+  async updateIssue() {
+    // TODO: описать мутацию обновления, когда она появится в API
+    throw new Error('updateIssue: мутация обновления ещё не реализована на бэкенде')
+  },
+
   async createIssue(params) {
     const data = await gql<CreateIssueResponse['data']>(CREATE_ISSUE_MUTATION, { ...params })
     const { issue, errors } = data.createIssue

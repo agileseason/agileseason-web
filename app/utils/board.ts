@@ -40,7 +40,7 @@ function mapLabel(label: ApiLabel): CardLabel {
 }
 
 // Из markdown-тела issue делаем короткое текстовое описание
-function makeDescription(body: string, max = 140): string | undefined {
+export function makeDescription(body: string, max = 140): string | undefined {
   const text = body
     .replace(/```[\s\S]*?```/g, ' ') // блоки кода
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ') // картинки
@@ -65,6 +65,7 @@ export function mapIssue(issue: ApiIssue): Card {
     repositoryFullName: issue.repositoryFullName,
     title: issue.title,
     description: makeDescription(issue.body),
+    body: issue.body,
     color: pickColor(issue.color),
     labels: issue.labels.map(mapLabel),
     assignees: issue.assignees.map(mapUser),

@@ -17,6 +17,16 @@ export interface MoveIssueParams {
   position: number // с 1, как в API
 }
 
+// Изменяются только переданные поля. assignees и labels передаются целиком (полная замена).
+export interface UpdateIssueParams {
+  issueId: number
+  title?: string
+  body?: string // markdown
+  assignees?: string[] // логины
+  labels?: string[] // названия меток
+  color?: string | null // null — сбросить цвет
+}
+
 export interface CreateIssueParams {
   boardId: number
   columnId: number
@@ -39,6 +49,7 @@ export interface BoardApi {
   fetchBoard(boardId: number): Promise<ApiBoard>
   moveIssue(params: MoveIssueParams): Promise<void>
   createIssue(params: CreateIssueParams): Promise<ApiIssue>
+  updateIssue(params: UpdateIssueParams): Promise<void>
   fetchAssignableUsers(boardId: number, repositoryFullName: string): Promise<AssignableUser[]>
   fetchLabels(boardId: number, repositoryFullName: string): Promise<GithubLabel[]>
 }
