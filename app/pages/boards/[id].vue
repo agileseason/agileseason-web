@@ -18,13 +18,15 @@ import {
   IconTable,
   IconChevronDown,
   IconChevronRight,
+  IconPencil,
 } from '@tabler/icons-vue'
-import { fetchBoard, moveIssue, createIssue } from '~/api/board'
+import { fetchBoard, moveIssue, createIssue, updateIssue } from '~/api/board'
+import type { UpdateIssueParams } from '~/api/board'
 import { fetchAssignableUsers } from '~/api/assignees'
 import type { AssignableUser } from '~/api/assignees'
 import { fetchLabels } from '~/api/labels'
 import type { GithubLabel } from '~/api/labels'
-import { mapBoard, mapIssue } from '~/utils/board'
+import { mapBoard, mapIssue, makeDescription } from '~/utils/board'
 import { CARD_COLORS } from '~/types/board'
 import type { Card, CardColor, CardLabel, Column } from '~/types/board'
 
@@ -107,6 +109,12 @@ function initials(name: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase()
+}
+
+// «USER/REPO#NUMBER» (или только репозиторий, если у карточки нет номера)
+function issueRef(card: Card) {
+  const repository = card.repositoryFullName ?? card.repositoryName ?? modalRepository.value ?? ''
+  return card.number ? `${repository}#${card.number}` : repository
 }
 
 function subtasksPercent(card: Card) {
@@ -224,6 +232,7 @@ const loadLabels = () => loadLabelsFor(modalRepository.value)
 
 // исполнители и метки специфичны для репозитория: при смене выбора (создание) сбрасываем их
 watch(formRepository, () => {
+  if (issueModal.value?.mode === 'edit') return // у существующей задачи списки не сбрасываем
   formAssignees.value = []
   formLabels.value = []
 })
@@ -333,15 +342,13 @@ function openEdit(card: Card) {
 
 function showEditModal(card: Card) {
   notice.value = ''
+  stopEditing()
   issueModal.value = { mode: 'edit', card }
   formRepository.value = null
   submitError.value = ''
-  formTitle.value = card.title
   formColor.value = card.color ?? null
-  formDescription.value = card.description ?? ''
   formAssignees.value = card.assignees.map(a => a.name)
   formLabels.value = card.labels.map(l => l.name)
-  focusTitle(true)
 }
 
 // ---- синхронизация модального окна с URL ----
@@ -402,6 +409,7 @@ function closeIssueModal() {
 }
 
 function resetIssueModal() {
+  stopEditing()
   issueModal.value = null
   formRepository.value = null
   formColor.value = null
@@ -414,58 +422,247 @@ function resetIssueModal() {
   cancelLabels()
 }
 
+// Создание задачи. Существующие задачи сохраняются сразу при каждом изменении (см. persistCard)
 async function submitIssue() {
   const modal = issueModal.value
   const title = formTitle.value.trim()
-  if (!modal || !title || !canSubmit.value) return
+  if (modal?.mode !== 'create' || !title || !canSubmit.value) return
   const description = formDescription.value.trim()
 
-  if (modal.mode === 'create') {
-    const column = modalColumn.value
-    const repositoryFullName = formRepository.value
-    if (!column || !repositoryFullName) return
-    const repository = repositories.value.find(r => r.fullName === repositoryFullName)
-    if (!repository) return
+  const column = modalColumn.value
+  const repositoryFullName = formRepository.value
+  if (!column || !repositoryFullName) return
+  const repository = repositories.value.find(r => r.fullName === repositoryFullName)
+  if (!repository) return
 
-    isSubmitting.value = true
-    submitError.value = ''
-    try {
-      const issue = await createIssue({
-        boardId,
-        columnId: column.id,
-        repositoryId: repository.id, // выбранный репозиторий
-        title,
-        body: description,
-        position: 'top',
-        assignees: formAssignees.value,
-        labels: formLabels.value,
-        color: formColor.value ?? undefined,
-      })
-      column.cards.unshift(mapIssue(issue))
-      column.collapsed = false // чтобы новая задача сразу была видна
-    } catch (e) {
-      console.error(e)
-      submitError.value = 'Не удалось создать задачу'
-      return
-    } finally {
-      isSubmitting.value = false
-    }
-  } else {
-    // TODO: мутация updateIssue(card.id, { title, description, assignees, labels }); при ошибке откатить изменения
-    modal.card.title = title
-    modal.card.description = description || undefined
-    modal.card.assignees = selectedAssignees()
-    modal.card.labels = selectedLabels()
-    modal.card.color = formColor.value ?? undefined // TODO: передать color в updateIssue
+  isSubmitting.value = true
+  submitError.value = ''
+  try {
+    const issue = await createIssue({
+      boardId,
+      columnId: column.id,
+      repositoryId: repository.id, // выбранный репозиторий
+      title,
+      body: description,
+      position: 'top',
+      assignees: formAssignees.value,
+      labels: formLabels.value,
+      color: formColor.value ?? undefined,
+    })
+    column.cards.unshift(mapIssue(issue))
+    column.collapsed = false // чтобы новая задача сразу была видна
+  } catch (e) {
+    console.error(e)
+    submitError.value = 'Не удалось создать задачу'
+    return
+  } finally {
+    isSubmitting.value = false
   }
   closeIssueModal()
 }
 
+// ---------- редактирование существующей задачи (как в Trello) ----------
+// Каждое изменение применяется к карточке сразу и отправляется на сервер;
+// при ошибке карточка откатывается к предыдущему значению.
+const isEditingIssueTitle = ref(false)
+const issueTitleDraft = ref('')
+const issueTitleInputEl = ref<HTMLInputElement | null>(null)
+
+const isEditingBody = ref(false)
+const bodyDraft = ref('')
+const bodyInputEl = ref<HTMLTextAreaElement | null>(null)
+
+// описание в виде HTML (markdown-it без сырого HTML, ссылки безопасны)
+const renderedBody = computed(() => {
+  const modal = issueModal.value
+  return modal?.mode === 'edit' ? renderMarkdown(modal.card.body ?? '') : ''
+})
+
+function stopEditing() {
+  isEditingIssueTitle.value = false
+  isEditingBody.value = false
+}
+
+// запросы выполняются по очереди, чтобы быстрые изменения не обгоняли друг друга
+let saveChain: Promise<void> = Promise.resolve()
+
+function persistCard(card: Card, patch: Omit<UpdateIssueParams, 'issueId'>, revert: () => void) {
+  if (card.id < 0) return // локальная карточка: на сервере её нет
+  saveChain = saveChain.then(async () => {
+    try {
+      submitError.value = ''
+      await updateIssue({ issueId: card.id, ...patch })
+    } catch (e) {
+      console.error(e)
+      revert()
+      submitError.value = 'Не удалось сохранить изменения'
+    }
+  })
+}
+
+const isCurrentCard = (card: Card) => issueModal.value?.mode === 'edit' && issueModal.value.card === card
+
+// ---- заголовок ----
+async function startEditIssueTitle() {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit') return
+  issueTitleDraft.value = modal.card.title
+  isEditingIssueTitle.value = true
+  await nextTick()
+  issueTitleInputEl.value?.focus()
+  issueTitleInputEl.value?.select()
+}
+
+function saveIssueTitle() {
+  // защита от повторного вызова (Enter + blur)
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit' || !isEditingIssueTitle.value) return
+  const card = modal.card
+  const title = issueTitleDraft.value.trim()
+  isEditingIssueTitle.value = false
+  if (!title || title === card.title) return // пустое название не сохраняем
+
+  const prev = card.title
+  card.title = title
+  persistCard(card, { title }, () => { card.title = prev })
+}
+
+function cancelEditIssueTitle() {
+  isEditingIssueTitle.value = false
+}
+
+// ---- описание ----
+function autoGrow() {
+  const el = bodyInputEl.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px` // + рамки
+}
+
+async function startEditBody() {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit') return
+  bodyDraft.value = modal.card.body ?? ''
+  isEditingBody.value = true
+  await nextTick()
+  const el = bodyInputEl.value
+  if (!el) return
+  autoGrow()
+  el.focus()
+  el.setSelectionRange(el.value.length, el.value.length)
+}
+
+function saveBody() {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit' || !isEditingBody.value) return
+  const card = modal.card
+  const body = bodyDraft.value.trim()
+  isEditingBody.value = false
+  if (body === (card.body ?? '').trim()) return
+
+  updateBody(card, body)
+}
+
+// Применяет новое описание к карточке и отправляет на сервер (откат при ошибке)
+function updateBody(card: Card, body: string) {
+  const prev = { body: card.body, description: card.description, subtasks: card.subtasks }
+  card.body = body
+  card.description = makeDescription(body)
+  // прогресс подзадач на карточке (totalSubtasks / doneSubtasks) зависит от чекбоксов в тексте
+  const tasks = countTasks(body)
+  card.subtasks = tasks.total > 0 ? tasks : undefined
+  persistCard(card, { body }, () => {
+    card.body = prev.body
+    card.description = prev.description
+    card.subtasks = prev.subtasks
+  })
+}
+
+// Клик по чекбоксу «- [ ]» в отрендеренном описании: меняем строку в markdown и сохраняем
+function onBodyClick(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLInputElement) || !target.classList.contains('task-checkbox')) return
+
+  const modal = issueModal.value
+  const body = modal?.mode === 'edit'
+    ? setTaskChecked(modal.card.body ?? '', Number(target.dataset.line), target.checked)
+    : null
+  if (modal?.mode !== 'edit' || body === null) {
+    event.preventDefault() // не удалось найти пункт в тексте — оставляем чекбокс как был
+    return
+  }
+  updateBody(modal.card, body)
+}
+
+function cancelEditBody() {
+  isEditingBody.value = false
+}
+
+// ---- исполнители, метки, цвет: применяются сразу при выборе ----
+const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(x => b.includes(x))
+
+watch(formAssignees, (logins) => {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit') return
+  const card = modal.card
+  const prev = card.assignees
+  if (sameSet(logins, prev.map(a => a.name))) return // форму только что заполнили из карточки
+
+  card.assignees = selectedAssignees()
+  persistCard(card, { assignees: [...logins] }, () => {
+    card.assignees = prev
+    if (isCurrentCard(card)) formAssignees.value = prev.map(a => a.name)
+  })
+})
+
+watch(formLabels, (names) => {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit') return
+  const card = modal.card
+  const prev = card.labels
+  if (sameSet(names, prev.map(l => l.name))) return
+
+  card.labels = selectedLabels()
+  persistCard(card, { labels: [...names] }, () => {
+    card.labels = prev
+    if (isCurrentCard(card)) formLabels.value = prev.map(l => l.name)
+  })
+})
+
+watch(formColor, (color) => {
+  const modal = issueModal.value
+  if (modal?.mode !== 'edit') return
+  const card = modal.card
+  const prev = card.color
+  if ((color ?? undefined) === prev) return
+
+  card.color = color ?? undefined
+  persistCard(card, { color }, () => {
+    card.color = prev
+    if (isCurrentCard(card)) formColor.value = prev ?? null
+  })
+})
+
 // блокируем прокрутку страницы под открытым модальным окном
+// Esc: сначала отменяет редактирование заголовка/описания, следующий Esc закрывает окно.
+// Слушаем document, а не само окно: после отмены поле ввода исчезает, фокус уходит на body,
+// и события клавиатуры до окна уже не доходят.
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return
+  if (isEditingIssueTitle.value) cancelEditIssueTitle()
+  else if (isEditingBody.value) cancelEditBody()
+  else closeIssueModal()
+}
+
 watch(isIssueModalOpen, (open) => {
   document.body.classList.toggle('modal-open', open)
+  if (open) document.addEventListener('keydown', onDocumentKeydown)
+  else document.removeEventListener('keydown', onDocumentKeydown)
 })
-onBeforeUnmount(() => document.body.classList.remove('modal-open'))
+onBeforeUnmount(() => {
+  document.body.classList.remove('modal-open')
+  document.removeEventListener('keydown', onDocumentKeydown)
+})
 
 // ---------- добавление колонки ----------
 const isAddingColumn = ref(false)
@@ -1185,60 +1382,119 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         aria-modal='true'
         aria-labelledby='issue-modal-title'
         @mousedown.self='closeIssueModal'
-        @keyup.esc='closeIssueModal'
       >
         <div class='modal-dialog modal-xl' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
             <div class='modal-header'>
-              <h5 id='issue-modal-title' class='modal-title'>
-                <template v-if='issueModal.mode === "create"'>
-                  Новая задача
-                  <span v-if='modalColumn' class='text-secondary fw-normal'>· {{ modalColumn.title }}</span>
-                </template>
-                <template v-else>
-                  Редактирование задачи
-                  <span v-if='issueModal.card.number' class='text-secondary fw-normal'>
-                    · #{{ issueModal.card.number }}
-                  </span>
-                </template>
+              <h5 v-if='issueModal.mode === "create"' id='issue-modal-title' class='modal-title'>
+                Новая задача
+                <span v-if='modalColumn' class='text-secondary fw-normal'>· {{ modalColumn.title }}</span>
               </h5>
+              <!-- Редактирование: заголовок превращается в поле ввода по клику -->
+              <div v-else class='flex-fill min-w-0 me-3'>
+                <input
+                  v-if='isEditingIssueTitle'
+                  ref='issueTitleInputEl'
+                  v-model='issueTitleDraft'
+                  type='text'
+                  class='form-control form-control-lg fw-bold'
+                  aria-label='Название задачи'
+                  autocomplete='off'
+                  @keydown.enter.prevent='saveIssueTitle'
+                  @blur='saveIssueTitle'
+                >
+                <h3
+                  v-else
+                  id='issue-modal-title'
+                  class='modal-title issue-title text-break'
+                  title='Нажмите, чтобы изменить'
+                  @click='startEditIssueTitle'
+                >
+                  {{ issueModal.card.title }}
+                </h3>
+              </div>
               <button type='button' class='btn-close' aria-label='Закрыть' @click='closeIssueModal' />
             </div>
             <div class='modal-body'>
               <div v-if='submitError' class='alert alert-danger' role='alert'>{{ submitError }}</div>
               <div class='row g-4'>
                 <div class='col-md-9'>
-                  <div class='mb-3'>
-                    <label class='form-label required' for='issue-title-input'>Название</label>
-                    <input
-                      id='issue-title-input'
-                      ref='titleInputEl'
-                      v-model='formTitle'
-                      type='text'
-                      class='form-control'
-                      placeholder='Название задачи'
-                      autocomplete='off'
-                      @keydown.ctrl.enter.prevent='submitIssue'
-                      @keydown.meta.enter.prevent='submitIssue'
+                  <!-- Создание: обычная форма -->
+                  <template v-if='issueModal.mode === "create"'>
+                    <div class='mb-3'>
+                      <label class='form-label required' for='issue-title-input'>Название</label>
+                      <input
+                        id='issue-title-input'
+                        ref='titleInputEl'
+                        v-model='formTitle'
+                        type='text'
+                        class='form-control'
+                        placeholder='Название задачи'
+                        autocomplete='off'
+                        @keydown.ctrl.enter.prevent='submitIssue'
+                        @keydown.meta.enter.prevent='submitIssue'
+                      >
+                    </div>
+                    <div>
+                      <label class='form-label' for='issue-description-input'>Описание</label>
+                      <textarea
+                        id='issue-description-input'
+                        v-model='formDescription'
+                        class='form-control'
+                        rows='5'
+                        placeholder='Подробности задачи (необязательно)'
+                        @keydown.ctrl.enter.prevent='submitIssue'
+                        @keydown.meta.enter.prevent='submitIssue'
+                      />
+                    </div>
+                  </template>
+
+                  <!-- Редактирование: описание отображается как markdown, «карандаш» включает редактор -->
+                  <div v-else>
+                    <div class='d-flex justify-content-between align-items-center mb-2'>
+                      <span class='form-label mb-0 me-1'>Описание</span>
+                      <button
+                        v-if='!isEditingBody'
+                        type='button'
+                        class='btn btn-ghost-secondary btn-icon btn-sm'
+                        aria-label='Редактировать описание'
+                        title='Редактировать описание'
+                        @click='startEditBody'
+                      >
+                        <IconPencil class='icon' />
+                      </button>
+                    </div>
+                    <template v-if='isEditingBody'>
+                      <textarea
+                        ref='bodyInputEl'
+                        v-model='bodyDraft'
+                        class='form-control body-textarea'
+                        placeholder='Описание в формате Markdown'
+                        @input='autoGrow'
+                        @keydown.ctrl.enter.prevent='saveBody'
+                        @keydown.meta.enter.prevent='saveBody'
+                      />
+                      <div class='d-flex gap-2 mt-2'>
+                        <button type='button' class='btn btn-primary btn-sm' @click='saveBody'>Сохранить</button>
+                        <button type='button' class='btn btn-ghost-secondary btn-sm' @click='cancelEditBody'>Отмена</button>
+                      </div>
+                    </template>
+                    <!-- eslint-disable-next-line vue/no-v-html -->
+                    <div v-else-if='renderedBody' class='markdown issue-markdown' @click='onBodyClick' v-html='renderedBody' />
+                    <button
+                      v-else
+                      type='button'
+                      class='btn btn-ghost-secondary w-100 text-start text-secondary'
+                      @click='startEditBody'
                     >
-                  </div>
-                  <div>
-                    <label class='form-label' for='issue-description-input'>Описание</label>
-                    <textarea
-                      id='issue-description-input'
-                      v-model='formDescription'
-                      class='form-control'
-                      rows='5'
-                      placeholder='Подробности задачи (необязательно)'
-                      @keydown.ctrl.enter.prevent='submitIssue'
-                      @keydown.meta.enter.prevent='submitIssue'
-                    />
+                      Добавить описание…
+                    </button>
                   </div>
                 </div>
                 <div class='col-md-3'>
                   <div class='mb-4'>
-                    <label class='form-label' :class='{ required: issueModal.mode === "create" }'>Репозиторий</label>
                     <template v-if='issueModal.mode === "create"'>
+                      <label class='form-label required'>Репозиторий</label>
                       <div v-if='!repositories.length' class='text-danger small'>
                         К доске не подключено ни одного репозитория
                       </div>
@@ -1259,8 +1515,18 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                       </div>
                     </template>
                     <div v-else>
-                      <span class='badge bg-secondary-lt'>
-                        {{ issueModal.card.repositoryFullName ?? issueModal.card.repositoryName ?? modalRepository }}
+                      <!-- Ссылка на задачу в GitHub: USER/REPO#NUMBER -->
+                      <a
+                        v-if='issueModal.card.url'
+                        :href='issueModal.card.url'
+                        target='_blank'
+                        rel='noopener'
+                        class='link-secondary'
+                      >
+                        {{ issueRef(issueModal.card) }}
+                      </a>
+                      <span v-else class='badge bg-secondary-lt text-wrap text-break'>
+                        {{ issueRef(issueModal.card) }}
                       </span>
                     </div>
                   </div>
@@ -1355,10 +1621,11 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                 </div>
               </div>
             </div>
-            <div class='modal-footer'>
+            <!-- У существующей задачи изменения сохраняются сразу, футер нужен только при создании -->
+            <div v-if='issueModal.mode === "create"' class='modal-footer'>
               <button type='button' class='btn btn-link link-secondary me-auto' @click='closeIssueModal'>Отмена</button>
               <button type='submit' class='btn btn-primary' :disabled='!canSubmit'>
-                {{ issueModal.mode === 'create' ? 'Создать' : 'Сохранить' }}
+                Создать
               </button>
             </div>
           </form>
@@ -1523,5 +1790,42 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 }
 .table-row-item:hover {
   background-color: var(--tblr-bg-surface-secondary);
+}
+
+/* ---------- модальное окно задачи ---------- */
+.issue-title {
+  cursor: text;
+  padding: 0.25rem 0.5rem;
+  margin: -0.25rem -0.5rem;
+  border-radius: var(--tblr-border-radius);
+}
+.issue-title:hover {
+  background-color: var(--tblr-bg-surface-secondary);
+}
+
+.body-textarea {
+  min-height: 8rem;
+  resize: none;
+  overflow: hidden;
+}
+
+.issue-markdown {
+  overflow-wrap: anywhere;
+}
+.issue-markdown :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+.issue-markdown :deep(pre) {
+  overflow-x: auto;
+}
+.issue-markdown :deep(.contains-task-list) {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.issue-markdown :deep(.task-checkbox) {
+  margin: 0 0.5rem 0.15rem 0;
+  vertical-align: middle;
+  cursor: pointer;
 }
 </style>

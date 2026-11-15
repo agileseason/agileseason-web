@@ -112,7 +112,8 @@ export interface Card {
   repositoryName?: string
   repositoryFullName?: string // owner/name, нужен для запроса доступных исполнителей
   title: string
-  description?: string
+  description?: string // короткий текст для предпросмотра
+  body?: string // полное markdown-описание задачи
   color?: CardColor // заливка всей карточки (bg-COLOR-lt)
   labels: CardLabel[]
   assignees: CardAssignee[]

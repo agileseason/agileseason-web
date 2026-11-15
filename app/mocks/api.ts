@@ -1,4 +1,5 @@
 import { MOCK_LABELS, MOCK_USERS } from '~/mocks/catalogs'
+import { countTasks } from '~/utils/markdown'
 import type { ApiBoard, ApiColumn, ApiIssue, BoardResponse } from '~/types/board'
 import type { BoardApi } from '~/api/types'
 
@@ -113,6 +114,42 @@ export const mockApi: BoardApi = {
     else column.issues.push(issue)
     normalize(column)
     return structuredClone(issue)
+  },
+
+  async updateIssue({ issueId, title, body, assignees, labels, color }) {
+    await delay(200)
+    for (const pending of boards.values()) {
+      const board = await pending
+      const issue = board.columns.flatMap(c => c.issues).find(i => i.id === issueId)
+      if (!issue) continue
+
+      if (title !== undefined) issue.title = title
+      if (body !== undefined) {
+        issue.body = body
+        issue.isBody = !!body
+        const { done, total } = countTasks(body) // как сервер: подзадачи считаются по чекбоксам
+        issue.totalSubtasks = total
+        issue.doneSubtasks = done
+      }
+      if (assignees !== undefined) {
+        issue.assignees = assignees.map((login) => {
+          const found = MOCK_USERS.find(u => u.login === login)
+          return { login, url: `https://github.com/${login}`, avatarUrl: found?.avatarUrl }
+        })
+      }
+      if (labels !== undefined) {
+        const current = issue.labels
+        issue.labels = labels.map((name) => {
+          const found = MOCK_LABELS.find(l => l.name === name)?.color
+            ?? current.find(l => l.name === name)?.color
+            ?? 'cccccc'
+          return { name, color: found.replace('#', '') } // без '#', как в API
+        })
+      }
+      if (color !== undefined) issue.color = color
+      return
+    }
+    throw new Error(`mock: задача ${issueId} не найдена`)
   },
 
   async fetchAssignableUsers() {
