@@ -28,7 +28,24 @@ import { mapBoard, mapIssue } from '~/utils/board'
 import { CARD_COLORS } from '~/types/board'
 import type { Card, CardColor, CardLabel, Column } from '~/types/board'
 
-const BOARD_ID = 42
+// ---------- маршрут ----------
+// /boards/:id — доска, /boards/:id/issues/:issueId — доска с открытой задачей.
+// Оба URL обслуживает один и тот же компонент (alias), а key зависит только от доски,
+// поэтому при открытии/закрытии задачи страница не перемонтируется и доска не перезагружается.
+definePageMeta({
+  alias: ['/boards/:id()/issues/:issueId()'],
+  key: route => `board-${route.params.id}`,
+  scrollToTop: false, // не прыгать вверх при открытии/закрытии задачи
+  validate: route =>
+    /^\d+$/.test(String(route.params.id))
+    && (route.params.issueId === undefined || /^\d+$/.test(String(route.params.issueId))),
+})
+
+const route = useRoute()
+const router = useRouter()
+
+const boardId = Number(route.params.id)
+const boardPath = `/boards/${boardId}`
 
 // ---------- загрузка данных ----------
 const boardName = ref('Задачи')
@@ -36,15 +53,19 @@ const columns = ref<Column[]>([])
 const isLoading = ref(true)
 const loadError = ref('')
 const repositories = ref<{ id: number, name: string, fullName: string }[]>([])
+const isBoardReady = ref(false) // доска загружена хотя бы раз
+const notice = ref('')
 
 async function load() {
   isLoading.value = true
   loadError.value = ''
   try {
-    const board = await fetchBoard(BOARD_ID)
+    const board = await fetchBoard(boardId)
     boardName.value = board.name
     columns.value = mapBoard(board)
     repositories.value = board.repositories ?? []
+    isBoardReady.value = true
+    syncModalWithRoute() // если открыли ссылку на задачу — показываем её
   } catch (e) {
     console.error(e)
     loadError.value = 'Не удалось загрузить доску'
@@ -69,7 +90,7 @@ onMounted(() => {
 
 watch(view, (value) => {
   // при смене вида закрываем открытые формы, чтобы они не «зависли» скрытыми
-  closeIssueModal()
+  if (issueModal.value) closeIssueModal()
   cancelAddColumn()
   editingColumnId.value = null
   try {
@@ -149,7 +170,7 @@ function useRepositoryList<T>(
 
     isLoading.value = true
     try {
-      const result = await fetcher(BOARD_ID, repository)
+      const result = await fetcher(boardId, repository)
       cache.set(repository, result)
       if (id === requestId) items.value = result
     } catch (e) {
@@ -301,7 +322,17 @@ function startAdd(columnId: number) {
   focusTitle()
 }
 
+// Открытие задачи: меняем URL, а само окно открывает syncModalWithRoute (см. ниже)
 function openEdit(card: Card) {
+  if (card.id < 0) { // локальная карточка, на сервере её ещё нет — URL не нужен
+    showEditModal(card)
+    return
+  }
+  router.push({ path: `${boardPath}/issues/${card.id}`, query: route.query })
+}
+
+function showEditModal(card: Card) {
+  notice.value = ''
   issueModal.value = { mode: 'edit', card }
   formRepository.value = null
   submitError.value = ''
@@ -313,7 +344,64 @@ function openEdit(card: Card) {
   focusTitle(true)
 }
 
+// ---- синхронизация модального окна с URL ----
+// card.id — внутренний id задачи (тот же, что уходит в moveIssue)
+const routeIssueId = computed(() => {
+  const raw = route.params.issueId
+  return raw === undefined ? null : Number(raw)
+})
+
+function findCard(id: number): Card | null {
+  for (const column of columns.value) {
+    const card = column.cards.find(c => c.id === id)
+    if (card) return card
+  }
+  return null
+}
+
+function syncModalWithRoute() {
+  // страницу уже покидаем или доска ещё не загружена
+  if (!isBoardReady.value || String(route.params.id) !== String(boardId)) return
+
+  const id = routeIssueId.value
+  const modal = issueModal.value
+
+  if (id === null) {
+    // «Назад» в браузере: закрываем окно редактирования (форму создания не трогаем)
+    if (modal?.mode === 'edit') resetIssueModal()
+    return
+  }
+  if (modal?.mode === 'edit' && modal.card.id === id) return
+
+  const card = findCard(id)
+  if (card) {
+    showEditModal(card)
+  } else {
+    resetIssueModal()
+    notice.value = `Задача ${id} не найдена на этой доске`
+    router.replace({ path: boardPath, query: route.query })
+  }
+}
+
+watch(routeIssueId, syncModalWithRoute)
+
+// Убираем /issues/:id из URL. Если пришли с доски кликом — просто «назад»,
+// чтобы не копить лишние записи в истории; если открыли ссылку напрямую — replace.
+function leaveIssueRoute() {
+  const back = (window.history.state as { back?: string | null } | null)?.back
+  if (typeof back === 'string' && back.split('?')[0] === boardPath) {
+    router.back()
+  } else {
+    router.replace({ path: boardPath, query: route.query })
+  }
+}
+
 function closeIssueModal() {
+  resetIssueModal()
+  if (routeIssueId.value !== null) leaveIssueRoute()
+}
+
+function resetIssueModal() {
   issueModal.value = null
   formRepository.value = null
   formColor.value = null
@@ -343,7 +431,7 @@ async function submitIssue() {
     submitError.value = ''
     try {
       const issue = await createIssue({
-        boardId: BOARD_ID,
+        boardId,
         columnId: column.id,
         repositoryId: repository.id, // выбранный репозиторий
         title,
@@ -520,6 +608,12 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
   <!-- BEGIN PAGE BODY -->
   <div class='page-body'>
     <div class='container-fluid'>
+      <!-- Уведомление (например, задача по ссылке не найдена) -->
+      <div v-if='notice' class='alert alert-warning alert-dismissible' role='alert'>
+        {{ notice }}
+        <button type='button' class='btn-close' aria-label='Закрыть' @click='notice = ""' />
+      </div>
+
       <!-- Загрузка -->
       <div
         v-if='isLoading && !columns.length'
