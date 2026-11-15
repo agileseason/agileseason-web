@@ -17,6 +17,15 @@ Start the development server on `http://localhost:3300`:
 pnpm dev -p 3300
 ```
 
+### .env
+
+#### Web only, create `.env.example`
+
+```
+NUXT_PUBLIC_API_MODE=mock
+NUXT_PUBLIC_API_URL=
+```
+
 ## Production
 
 Build the application for production:

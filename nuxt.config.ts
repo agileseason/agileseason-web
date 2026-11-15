@@ -3,6 +3,15 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   ssr: false,
+  runtimeConfig: {
+    public: {
+      // mock — данные из ~/mocks, бэкенд не нужен; real — GraphQL-бэкенд.
+      // В dev по умолчанию mock, в production — real. Переопределяется NUXT_PUBLIC_API_MODE.
+      apiMode: (process.env.NODE_ENV === 'production' ? 'real' : 'mock') as 'mock' | 'real',
+      // Полный URL GraphQL endpoint (нужен для real). Переопределяется NUXT_PUBLIC_API_URL.
+      apiUrl: '',
+    },
+  },
   modules: [
     '@nuxt/eslint',
   ],
