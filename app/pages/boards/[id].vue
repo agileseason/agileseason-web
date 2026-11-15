@@ -111,6 +111,12 @@ function initials(name: string) {
     .toUpperCase()
 }
 
+// «USER/REPO#NUMBER» (или только репозиторий, если у карточки нет номера)
+function issueRef(card: Card) {
+  const repository = card.repositoryFullName ?? card.repositoryName ?? modalRepository.value ?? ''
+  return card.number ? `${repository}#${card.number}` : repository
+}
+
 function subtasksPercent(card: Card) {
   if (!card.subtasks?.total) return 0
   return Math.round((card.subtasks.done / card.subtasks.total) * 100)
@@ -1406,19 +1412,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                 >
                   {{ issueModal.card.title }}
                 </h3>
-                <div v-if='issueModal.card.number' class='text-secondary small mt-1'>
-                  <a
-                    v-if='issueModal.card.url'
-                    :href='issueModal.card.url'
-                    target='_blank'
-                    rel='noopener'
-                    class='text-decoration-none link-secondary'
-                  >
-                    #{{ issueModal.card.number }}
-                    <template v-if='issueModal.card.repositoryName'>&nbsp;{{ issueModal.card.repositoryName }}</template>
-                  </a>
-                  <template v-else>#{{ issueModal.card.number }}</template>
-                </div>
               </div>
               <button type='button' class='btn-close' aria-label='Закрыть' @click='closeIssueModal' />
             </div>
@@ -1500,8 +1493,8 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                 </div>
                 <div class='col-md-3'>
                   <div class='mb-4'>
-                    <label class='form-label' :class='{ required: issueModal.mode === "create" }'>Репозиторий</label>
                     <template v-if='issueModal.mode === "create"'>
+                      <label class='form-label required'>Репозиторий</label>
                       <div v-if='!repositories.length' class='text-danger small'>
                         К доске не подключено ни одного репозитория
                       </div>
@@ -1522,8 +1515,18 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                       </div>
                     </template>
                     <div v-else>
-                      <span class='badge bg-secondary-lt'>
-                        {{ issueModal.card.repositoryFullName ?? issueModal.card.repositoryName ?? modalRepository }}
+                      <!-- Ссылка на задачу в GitHub: USER/REPO#NUMBER -->
+                      <a
+                        v-if='issueModal.card.url'
+                        :href='issueModal.card.url'
+                        target='_blank'
+                        rel='noopener'
+                        class='link-secondary'
+                      >
+                        {{ issueRef(issueModal.card) }}
+                      </a>
+                      <span v-else class='badge bg-secondary-lt text-wrap text-break'>
+                        {{ issueRef(issueModal.card) }}
                       </span>
                     </div>
                   </div>
