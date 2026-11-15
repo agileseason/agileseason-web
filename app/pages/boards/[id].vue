@@ -1458,7 +1458,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                   <!-- Редактирование: описание отображается как markdown, «карандаш» включает редактор -->
                   <div v-else>
-                    <div class='d-flex align-items-center mb-2'>
+                    <div class='d-flex justify-content-between align-items-center mb-2'>
                       <span class='form-label mb-0 me-1'>Описание</span>
                       <button
                         v-if='!isEditingBody'
