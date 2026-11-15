@@ -554,13 +554,38 @@ function saveBody() {
   isEditingBody.value = false
   if (body === (card.body ?? '').trim()) return
 
-  const prev = { body: card.body, description: card.description }
+  updateBody(card, body)
+}
+
+// Применяет новое описание к карточке и отправляет на сервер (откат при ошибке)
+function updateBody(card: Card, body: string) {
+  const prev = { body: card.body, description: card.description, subtasks: card.subtasks }
   card.body = body
   card.description = makeDescription(body)
+  // прогресс подзадач на карточке (totalSubtasks / doneSubtasks) зависит от чекбоксов в тексте
+  const tasks = countTasks(body)
+  card.subtasks = tasks.total > 0 ? tasks : undefined
   persistCard(card, { body }, () => {
     card.body = prev.body
     card.description = prev.description
+    card.subtasks = prev.subtasks
   })
+}
+
+// Клик по чекбоксу «- [ ]» в отрендеренном описании: меняем строку в markdown и сохраняем
+function onBodyClick(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLInputElement) || !target.classList.contains('task-checkbox')) return
+
+  const modal = issueModal.value
+  const body = modal?.mode === 'edit'
+    ? setTaskChecked(modal.card.body ?? '', Number(target.dataset.line), target.checked)
+    : null
+  if (modal?.mode !== 'edit' || body === null) {
+    event.preventDefault() // не удалось найти пункт в тексте — оставляем чекбокс как был
+    return
+  }
+  updateBody(modal.card, body)
 }
 
 function cancelEditBody() {
@@ -613,10 +638,25 @@ watch(formColor, (color) => {
 })
 
 // блокируем прокрутку страницы под открытым модальным окном
+// Esc: сначала отменяет редактирование заголовка/описания, следующий Esc закрывает окно.
+// Слушаем document, а не само окно: после отмены поле ввода исчезает, фокус уходит на body,
+// и события клавиатуры до окна уже не доходят.
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return
+  if (isEditingIssueTitle.value) cancelEditIssueTitle()
+  else if (isEditingBody.value) cancelEditBody()
+  else closeIssueModal()
+}
+
 watch(isIssueModalOpen, (open) => {
   document.body.classList.toggle('modal-open', open)
+  if (open) document.addEventListener('keydown', onDocumentKeydown)
+  else document.removeEventListener('keydown', onDocumentKeydown)
 })
-onBeforeUnmount(() => document.body.classList.remove('modal-open'))
+onBeforeUnmount(() => {
+  document.body.classList.remove('modal-open')
+  document.removeEventListener('keydown', onDocumentKeydown)
+})
 
 // ---------- добавление колонки ----------
 const isAddingColumn = ref(false)
@@ -1336,7 +1376,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
         aria-modal='true'
         aria-labelledby='issue-modal-title'
         @mousedown.self='closeIssueModal'
-        @keyup.esc='closeIssueModal'
       >
         <div class='modal-dialog modal-xl' role='document'>
           <form class='modal-content' @submit.prevent='submitIssue'>
@@ -1356,7 +1395,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                   aria-label='Название задачи'
                   autocomplete='off'
                   @keydown.enter.prevent='saveIssueTitle'
-                  @keyup.esc.stop='cancelEditIssueTitle'
                   @blur='saveIssueTitle'
                 >
                 <h3
@@ -1420,7 +1458,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 
                   <!-- Редактирование: описание отображается как markdown, «карандаш» включает редактор -->
                   <div v-else>
-                    <div class='d-flex justify-content-between align-items-center mb-2'>
+                    <div class='d-flex align-items-center mb-2'>
                       <span class='form-label mb-0 me-1'>Описание</span>
                       <button
                         v-if='!isEditingBody'
@@ -1440,7 +1478,6 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                         class='form-control body-textarea'
                         placeholder='Описание в формате Markdown'
                         @input='autoGrow'
-                        @keyup.esc.stop='cancelEditBody'
                         @keydown.ctrl.enter.prevent='saveBody'
                         @keydown.meta.enter.prevent='saveBody'
                       />
@@ -1450,7 +1487,7 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
                       </div>
                     </template>
                     <!-- eslint-disable-next-line vue/no-v-html -->
-                    <div v-else-if='renderedBody' class='markdown issue-markdown' v-html='renderedBody' />
+                    <div v-else-if='renderedBody' class='markdown issue-markdown' @click='onBodyClick' v-html='renderedBody' />
                     <button
                       v-else
                       type='button'
@@ -1778,5 +1815,14 @@ async function onCardsChange(column: Column, evt: SortableEvent) {
 }
 .issue-markdown :deep(pre) {
   overflow-x: auto;
+}
+.issue-markdown :deep(.contains-task-list) {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.issue-markdown :deep(.task-checkbox) {
+  margin: 0 0.5rem 0.15rem 0;
+  vertical-align: middle;
+  cursor: pointer;
 }
 </style>

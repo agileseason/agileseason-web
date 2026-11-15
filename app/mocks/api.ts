@@ -1,4 +1,5 @@
 import { MOCK_LABELS, MOCK_USERS } from '~/mocks/catalogs'
+import { countTasks } from '~/utils/markdown'
 import type { ApiBoard, ApiColumn, ApiIssue, BoardResponse } from '~/types/board'
 import type { BoardApi } from '~/api/types'
 
@@ -126,6 +127,9 @@ export const mockApi: BoardApi = {
       if (body !== undefined) {
         issue.body = body
         issue.isBody = !!body
+        const { done, total } = countTasks(body) // как сервер: подзадачи считаются по чекбоксам
+        issue.totalSubtasks = total
+        issue.doneSubtasks = done
       }
       if (assignees !== undefined) {
         issue.assignees = assignees.map((login) => {
