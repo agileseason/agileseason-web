@@ -1,4 +1,5 @@
-import type { ApiBoard, ApiIssue } from '~/types/board'
+// app/api/types.ts
+import type { ApiBoard, ApiCurrentUser, ApiIssue } from '~/types/board'
 
 export interface AssignableUser {
   login: string
@@ -46,6 +47,7 @@ export interface CreateIssueResponse {
 // Контракт API. Его реализуют и http (реальный бэкенд), и mock:
 // если добавить метод в интерфейс, TypeScript потребует обе реализации.
 export interface BoardApi {
+  fetchCurrentUser(): Promise<ApiCurrentUser>
   fetchBoard(boardId: number): Promise<ApiBoard>
   moveIssue(params: MoveIssueParams): Promise<void>
   createIssue(params: CreateIssueParams): Promise<ApiIssue>

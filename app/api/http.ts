@@ -1,5 +1,6 @@
+// app/api/http.ts
 import { gql } from '~/api/graphql'
-import type { ApiBoard } from '~/types/board'
+import type { ApiBoard, ApiCurrentUser } from '~/types/board'
 import type { BoardApi, AssignableUser, CreateIssueResponse, GithubLabel } from '~/api/types'
 
 // ---------- запросы ----------
@@ -14,6 +15,33 @@ const ISSUE_FIELDS = `
   pullRequests {
     id number isClosed isMerged url repositoryName
     assignees { login avatarUrl }
+  }
+`
+
+const CURRENT_USER_QUERY = `
+  query {
+    user {
+      id
+      username
+      avatarUrl
+      boards {
+        id
+        name
+        isOwner
+        users { login avatarUrl }
+        repositories { name fullName }
+        columns { id name position issuesCount }
+        stats {
+          openIssuesCount
+          myOpenIssuesCount
+          closedIssuesLastWeekCount
+          lastActivityAt
+        }
+      }
+      properties {
+        isMonoMarkdownFont
+      }
+    }
   }
 `
 
@@ -82,6 +110,13 @@ const LABELS_QUERY = `
 
 // ---------- реализация ----------
 export const httpApi: BoardApi = {
+  async fetchCurrentUser() {
+    const data = await gql<{ user: ApiCurrentUser | null }>(CURRENT_USER_QUERY)
+    // без токена (или с неверным) бэкенд отвечает user: null
+    if (!data.user) throw new Error('Не авторизован: проверьте NUXT_PUBLIC_API_TOKEN')
+    return data.user
+  },
+
   async fetchBoard(boardId) {
     const data = await gql<{ board: ApiBoard }>(BOARD_QUERY, { id: boardId })
     return data.board

@@ -1,4 +1,6 @@
+// app/mocks/api.ts
 import { MOCK_LABELS, MOCK_USERS } from '~/mocks/catalogs'
+import { MOCK_CURRENT_USER } from '~/mocks/user'
 import { countTasks } from '~/utils/markdown'
 import type { ApiBoard, ApiColumn, ApiIssue, BoardResponse } from '~/types/board'
 import type { BoardApi } from '~/api/types'
@@ -14,10 +16,12 @@ const boards = new Map<number, Promise<ApiBoard>>()
 function getBoard(boardId: number): Promise<ApiBoard> {
   let board = boards.get(boardId)
   if (!board) {
-    board = import('~/mocks/board.json').then(({ default: json }) => ({
-      ...structuredClone((json as unknown as BoardResponse).data.board),
-      id: boardId,
-    }))
+    board = import('~/mocks/board.json').then(({ default: json }) => {
+      const fixture = structuredClone((json as unknown as BoardResponse).data.board)
+      // имя берём из списка досок пользователя (остальное — одна и та же фикстура)
+      const name = MOCK_CURRENT_USER.boards.find(b => b.id === boardId)?.name ?? fixture.name
+      return { ...fixture, id: boardId, name }
+    })
     boards.set(boardId, board)
   }
   return board
@@ -32,6 +36,11 @@ function normalize(column: ApiColumn) {
 }
 
 export const mockApi: BoardApi = {
+  async fetchCurrentUser() {
+    await delay(200)
+    return structuredClone(MOCK_CURRENT_USER)
+  },
+
   async fetchBoard(boardId) {
     await delay(400)
     return structuredClone(await getBoard(boardId))

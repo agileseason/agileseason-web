@@ -1,16 +1,17 @@
+<!-- app/app.vue -->
 <script setup lang="ts">
 import {
   IconMoon,
   IconSun,
   IconUserCircle,
-  IconReceipt,
+  IconLayoutKanban,
 } from '@tabler/icons-vue'
 
 const appConfig = useAppConfig();
 const route = useRoute();
 const { isMobile } = useDevice();
 const isSignedIn = false; // NOTE: пока нет авторизации.
-const defaultBoardPath = '/boards/42'; // TODO: заменить на список досок
+const defaultBoardPath = '/boards/42'; // TODO: открывать последнюю/первую доску пользователя
 
 const navbarMenu = ref(null);
 const navbarToggler = ref(null);
@@ -162,9 +163,9 @@ watch(() => route.fullPath, closeMenu)
         >
           <ul class='navbar-nav' @click='onMenuClick'>
             <li class='nav-item'>
-              <NuxtLink class='nav-link' :to='defaultBoardPath'>
-                <IconReceipt size='20' stroke-width='1' />
-                <span class='nav-link-title ms-1'>TODO</span>
+              <NuxtLink class='nav-link' to='/boards' active-class='active'>
+                <IconLayoutKanban size='20' stroke-width='1' />
+                <span class='nav-link-title ms-1'>Доски</span>
               </NuxtLink>
             </li>
           </ul>

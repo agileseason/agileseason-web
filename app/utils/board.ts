@@ -1,3 +1,4 @@
+// app/utils/board.ts
 import { CARD_COLORS } from '~/types/board'
 import type {
   ApiBoard,

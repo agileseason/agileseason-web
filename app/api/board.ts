@@ -1,3 +1,4 @@
+// app/api/board.ts
 import { getApi } from '~/api/client'
 import type { ApiBoard, ApiIssue } from '~/types/board'
 import type { CreateIssueParams, MoveIssueParams, UpdateIssueParams } from '~/api/types'
